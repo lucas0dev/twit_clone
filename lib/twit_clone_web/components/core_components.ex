@@ -19,6 +19,7 @@ defmodule TwitCloneWeb.CoreComponents do
   alias Phoenix.LiveView.JS
   import TwitCloneWeb.Gettext
 
+
   @doc """
   Renders a modal.
 
@@ -649,5 +650,31 @@ defmodule TwitCloneWeb.CoreComponents do
   """
   def translate_errors(errors, field) when is_list(errors) do
     for {^field, {msg, opts}} <- errors, do: translate_error({msg, opts})
+  end
+
+
+  def menu(assigns) do
+    ~H"""
+    <ul class="menu relative z-10 flex items-center gap-4 px-4 sm:px-6 lg:px-8 justify-end">
+      <%= if @current_user do %>
+        <li class="text-[0.8125rem] leading-6 text-zinc-900">
+          <%= @current_user.email %>
+        </li>
+        <li>
+          <.link href={"/users/settings"} class="menu-item"> Settings </.link>
+        </li>
+        <li>
+          <.link href={"/users/log_out"} method="delete" class="menu-item"> Log out </.link>
+        </li>
+      <% else %>
+        <li>
+          <.link href={"/users/register"} class="menu-item"> Register </.link>
+        </li>
+        <li>
+          <.link href={"/users/log_in"} class="menu-item"> Log in </.link>
+        </li>
+      <% end %>
+    </ul>
+    """
   end
 end

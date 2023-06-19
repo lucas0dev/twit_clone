@@ -35,3 +35,6 @@ twit_clone-*.tar
 npm-debug.log
 /assets/node_modules/
 
+**/*.secret.exs
+
+.env
