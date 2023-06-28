@@ -1,13 +1,17 @@
 defmodule TwitClone.Accounts.User do
+  @moduledoc false
+
   use Ecto.Schema
   import Ecto.Changeset
+
+  alias TwitClone.Tweets.Tweet
 
   schema "users" do
     field :email, :string
     field :password, :string, virtual: true, redact: true
     field :hashed_password, :string, redact: true
     field :confirmed_at, :naive_datetime
-
+    has_many :tweets, Tweet, on_delete: :delete_all
     timestamps()
   end
 

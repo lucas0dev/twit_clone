@@ -1,10 +1,13 @@
 defmodule TwitCloneWeb.UserAuth do
+  @moduledoc false
+
   use TwitCloneWeb, :verified_routes
 
   import Plug.Conn
   import Phoenix.Controller
 
   alias TwitClone.Accounts
+  alias TwitClone.Tweets
 
   # Make the remember me cookie valid for 60 days.
   # If you want bump or reduce this value, also change
@@ -172,6 +175,24 @@ defmodule TwitCloneWeb.UserAuth do
     end
   end
 
+  def on_mount(:ensure_tweet_owner, params, session, socket) do
+    socket = mount_current_user(socket, session)
+    requested_id = Map.get(params, "id", nil)
+    owner_id = Tweets.get_tweet!(requested_id).user_id
+    current_user = socket.assigns.current_user
+
+    if current_user && current_user.id == owner_id do
+      {:cont, socket}
+    else
+      socket =
+        socket
+        |> Phoenix.LiveView.put_flash(:error, "You can't edit someone else's tweet.")
+        |> Phoenix.LiveView.redirect(to: ~p"/users/log_in")
+
+      {:halt, socket}
+    end
+  end
+
   defp mount_current_user(socket, session) do
     Phoenix.Component.assign_new(socket, :current_user, fn ->
       if user_token = session["user_token"] do
@@ -205,6 +226,22 @@ defmodule TwitCloneWeb.UserAuth do
     else
       conn
       |> put_flash(:error, "You must log in to access this page.")
+      |> maybe_store_return_to()
+      |> redirect(to: ~p"/users/log_in")
+      |> halt()
+    end
+  end
+
+  def require_tweet_owner(conn, _opts) do
+    requested_id = Map.get(conn.path_params, "id", nil)
+    owner_id = Tweets.get_tweet!(requested_id).user_id
+    current_user = conn.assigns[:current_user]
+
+    if current_user && current_user.id == owner_id do
+      conn
+    else
+      conn
+      |> put_flash(:error, "You can't edit someone else's tweet.")
       |> maybe_store_return_to()
       |> redirect(to: ~p"/users/log_in")
       |> halt()

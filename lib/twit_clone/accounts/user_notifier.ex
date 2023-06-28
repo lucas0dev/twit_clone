@@ -1,4 +1,6 @@
 defmodule TwitClone.Accounts.UserNotifier do
+  @moduledoc false
+
   import Swoosh.Email
 
   alias TwitClone.Mailer

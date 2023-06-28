@@ -68,6 +68,7 @@ defmodule TwitCloneWeb.Router do
       on_mount: [{TwitCloneWeb.UserAuth, :ensure_authenticated}] do
       live "/users/settings", UserSettingsLive, :edit
       live "/users/settings/confirm_email/:token", UserSettingsLive, :confirm_email
+      live "/tweets/new", TweetLive.Index, :new
     end
   end
 
@@ -80,6 +81,18 @@ defmodule TwitCloneWeb.Router do
       on_mount: [{TwitCloneWeb.UserAuth, :mount_current_user}] do
       live "/users/confirm/:token", UserConfirmationLive, :edit
       live "/users/confirm", UserConfirmationInstructionsLive, :new
+      live "/tweets", TweetLive.Index, :index
+
+      live "/tweets/:id", TweetLive.Show, :show
+    end
+  end
+
+  scope "/", TwitCloneWeb do
+    pipe_through [:browser, :require_tweet_owner]
+
+    live_session :require_tweet_owner,
+      on_mount: [{TwitCloneWeb.UserAuth, :ensure_tweet_owner}] do
+      live "/tweets/:id/edit", TweetLive.Index, :edit
     end
   end
 end

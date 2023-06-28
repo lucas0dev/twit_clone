@@ -1,0 +1,49 @@
+<.header>
+  Listing Tweets
+  <:actions>
+    <%= if @current_user do %>
+      <.link patch={~p"/tweets/new"}>
+        <.button>New Tweet</.button>
+      </.link>
+    <% end %>
+  </:actions>
+</.header>
+
+<.table
+  id="tweets"
+  rows={@streams.tweets}
+  row_click={fn {_id, tweet} -> JS.navigate(~p"/tweets/#{tweet}") end}
+>
+  <:col :let={{_id, tweet}} label="Body"><%= tweet.body %></:col>
+  <:action :let={{_id, tweet}}>
+    <div class="sr-only">
+      <.link navigate={~p"/tweets/#{tweet}"}>Show</.link>
+    </div>
+    <.link patch={~p"/tweets/#{tweet}/edit"}>Edit</.link>
+  </:action>
+  <:action :let={{id, tweet}}>
+    <.link
+      phx-click={JS.push("delete", value: %{id: tweet.id}) |> hide("##{id}")}
+      data-confirm="Are you sure?"
+    >
+      Delete
+    </.link>
+  </:action>
+</.table>
+
+<.modal
+  :if={@live_action in [:new, :edit]}
+  id="tweet-modal"
+  show
+  on_cancel={JS.patch(~p"/tweets")}
+>
+  <.live_component
+    module={TwitCloneWeb.TweetLive.FormComponent}
+    id={@tweet.id || :new}
+    title={@page_title}
+    action={@live_action}
+    tweet={@tweet}
+    user_id={@user_id}
+    patch={~p"/tweets"}
+  />
+</.modal>
