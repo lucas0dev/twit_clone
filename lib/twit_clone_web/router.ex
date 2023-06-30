@@ -17,12 +17,6 @@ defmodule TwitCloneWeb.Router do
     plug :accepts, ["json"]
   end
 
-  scope "/", TwitCloneWeb do
-    pipe_through :browser
-
-    get "/", PageController, :home
-  end
-
   # Other scopes may use custom stacks.
   # scope "/api", TwitCloneWeb do
   #   pipe_through :api
@@ -81,7 +75,7 @@ defmodule TwitCloneWeb.Router do
       on_mount: [{TwitCloneWeb.UserAuth, :mount_current_user}] do
       live "/users/confirm/:token", UserConfirmationLive, :edit
       live "/users/confirm", UserConfirmationInstructionsLive, :new
-      live "/tweets", TweetLive.Index, :index
+      live "/", TweetLive.Index, :index
 
       live "/tweets/:id", TweetLive.Show, :show
     end

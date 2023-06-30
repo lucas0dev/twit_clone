@@ -4,6 +4,7 @@ defmodule TwitClone.Accounts.User do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias TwitClone.Tweets.Comment
   alias TwitClone.Tweets.Tweet
 
   schema "users" do
@@ -11,7 +12,12 @@ defmodule TwitClone.Accounts.User do
     field :password, :string, virtual: true, redact: true
     field :hashed_password, :string, redact: true
     field :confirmed_at, :naive_datetime
+    field :account_name, :string
+    field :name, :string
+    field :avatar, :string
     has_many :tweets, Tweet, on_delete: :delete_all
+    has_many :comments, Comment, foreign_key: :user_id
+
     timestamps()
   end
 
@@ -40,9 +46,14 @@ defmodule TwitClone.Accounts.User do
   """
   def registration_changeset(user, attrs, opts \\ []) do
     user
-    |> cast(attrs, [:email, :password])
+    |> cast(attrs, [:email, :password, :account_name, :name, :avatar])
     |> validate_email(opts)
     |> validate_password(opts)
+    |> validate_required([:account_name, :name])
+    |> unique_constraint(
+      :account_name,
+      name: :index_for_unique_name
+    )
   end
 
   defp validate_email(changeset, opts) do
@@ -87,6 +98,12 @@ defmodule TwitClone.Accounts.User do
     else
       changeset
     end
+  end
+
+  def info_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:avatar, :name])
+    |> validate_required([:name])
   end
 
   @doc """

@@ -5,11 +5,13 @@ defmodule TwitClone.Tweets.Tweet do
   import Ecto.Changeset
 
   alias TwitClone.Accounts.User
+  alias TwitClone.Tweets.Comment
 
   schema "tweets" do
     field :body, :string
     field :image, :string
     belongs_to :user, User
+    has_many :comments, Comment, foreign_key: :tweet_id
 
     timestamps()
   end

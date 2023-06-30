@@ -31,4 +31,19 @@ defmodule TwitClone.TweetsFixtures do
   def random_string(length \\ 10) do
     :crypto.strong_rand_bytes(length) |> Base.url_encode64() |> binary_part(0, length)
   end
+
+  @doc """
+  Generate a comment.
+  """
+  def comment_fixture(attrs \\ %{}) do
+    {:ok, comment} =
+      attrs
+      |> Enum.into(%{
+        body: "some body",
+        image: "some image"
+      })
+      |> TwitClone.Tweets.create_comment()
+
+    comment
+  end
 end

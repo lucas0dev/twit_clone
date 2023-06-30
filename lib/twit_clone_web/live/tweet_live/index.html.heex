@@ -31,12 +31,7 @@
   </:action>
 </.table>
 
-<.modal
-  :if={@live_action in [:new, :edit]}
-  id="tweet-modal"
-  show
-  on_cancel={JS.patch(~p"/tweets")}
->
+<.modal :if={@live_action in [:new, :edit]} id="tweet-modal" show on_cancel={JS.patch(~p"/")}>
   <.live_component
     module={TwitCloneWeb.TweetLive.FormComponent}
     id={@tweet.id || :new}
@@ -44,6 +39,6 @@
     action={@live_action}
     tweet={@tweet}
     user_id={@user_id}
-    patch={~p"/tweets"}
+    patch={~p"/"}
   />
 </.modal>

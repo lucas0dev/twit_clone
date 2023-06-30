@@ -97,7 +97,7 @@ defmodule TwitClone.AccountsTest do
   describe "change_user_registration/2" do
     test "returns a changeset" do
       assert %Ecto.Changeset{} = changeset = Accounts.change_user_registration(%User{})
-      assert changeset.required == [:password, :email]
+      assert changeset.required == [:account_name, :name, :password, :email]
     end
 
     test "allows fields to be set" do
@@ -121,6 +121,13 @@ defmodule TwitClone.AccountsTest do
     test "returns a user changeset" do
       assert %Ecto.Changeset{} = changeset = Accounts.change_user_email(%User{})
       assert changeset.required == [:email]
+    end
+  end
+
+  describe "change_user_info/2" do
+    test "returns a user changeset" do
+      assert %Ecto.Changeset{} = changeset = Accounts.change_user_info(%User{})
+      assert changeset.required == [:name]
     end
   end
 
@@ -171,6 +178,22 @@ defmodule TwitClone.AccountsTest do
       {:ok, user} = Accounts.apply_user_email(user, valid_user_password(), %{email: email})
       assert user.email == email
       assert Accounts.get_user!(user.id).email != email
+    end
+  end
+
+  describe "update_user_info/2" do
+    setup do
+      %{user: user_fixture()}
+    end
+
+    test "updates user name and avatar", %{user: user} do
+      name = "new name"
+      assert user.avatar != nil
+
+      {:ok, user} = Accounts.update_user_info(user, %{name: name, avatar: nil})
+
+      assert user.name == name
+      assert user.avatar == nil
     end
   end
 

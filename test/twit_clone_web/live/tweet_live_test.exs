@@ -28,7 +28,7 @@ defmodule TwitCloneWeb.TweetLiveTest do
     test "lists all tweets", %{conn: conn, tweet: tweet} do
       {:ok, _view, html} =
         conn
-        |> live(~p"/tweets")
+        |> live(~p"/")
 
       assert html =~ "Listing Tweets"
       assert html =~ tweet.body
@@ -49,7 +49,7 @@ defmodule TwitCloneWeb.TweetLiveTest do
     end
 
     test "handle_event 'delete' does not delete tweet", %{conn: conn, tweet: tweet} do
-      {:ok, view, html} = live(conn, ~p"/tweets")
+      {:ok, view, html} = live(conn, ~p"/")
       assert html =~ tweet.body
 
       assert render_hook(view, :delete, %{"id" => tweet.id}) =~ tweet.body
@@ -64,7 +64,7 @@ defmodule TwitCloneWeb.TweetLiveTest do
       {:ok, _index_live, html} =
         conn
         |> log_in_user(user)
-        |> live(~p"/tweets")
+        |> live(~p"/")
 
       assert html =~ "Listing Tweets"
       assert html =~ tweet.body
@@ -77,7 +77,7 @@ defmodule TwitCloneWeb.TweetLiveTest do
       {:ok, index_live, _html} =
         conn
         |> log_in_user(user)
-        |> live(~p"/tweets")
+        |> live(~p"/")
 
       assert index_live |> element("a", "New Tweet") |> render_click() =~
                "New Tweet"
@@ -92,7 +92,7 @@ defmodule TwitCloneWeb.TweetLiveTest do
              |> form("#tweet-form", tweet: @create_attrs)
              |> render_submit()
 
-      assert_patch(index_live, ~p"/tweets")
+      assert_patch(index_live, ~p"/")
 
       [_first, last] = Repo.all(Tweet)
 
@@ -110,7 +110,7 @@ defmodule TwitCloneWeb.TweetLiveTest do
       {:ok, index_live, _html} =
         conn
         |> log_in_user(user)
-        |> live(~p"/tweets")
+        |> live(~p"/")
 
       assert index_live |> element("#tweets-#{tweet.id} a", "Edit") |> render_click() =~
                "Edit Tweet"
@@ -125,7 +125,7 @@ defmodule TwitCloneWeb.TweetLiveTest do
              |> form("#tweet-form", tweet: @update_attrs)
              |> render_submit()
 
-      assert_patch(index_live, ~p"/tweets")
+      assert_patch(index_live, ~p"/")
 
       [tweet] = Repo.all(Tweet)
 
@@ -143,7 +143,7 @@ defmodule TwitCloneWeb.TweetLiveTest do
       {:ok, view, html} =
         conn
         |> log_in_user(user)
-        |> live(~p"/tweets")
+        |> live(~p"/")
 
       assert html =~ tweet.body
       refute render_hook(view, :delete, %{"id" => tweet.id}) =~ tweet.body

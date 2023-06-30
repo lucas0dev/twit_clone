@@ -3,6 +3,7 @@ defmodule TwitCloneWeb.UserSettingsLiveTest do
 
   alias TwitClone.Accounts
   import Phoenix.LiveViewTest
+  import Phoenix.HTML
   import TwitClone.AccountsFixtures
 
   describe "Settings page" do
@@ -14,6 +15,7 @@ defmodule TwitCloneWeb.UserSettingsLiveTest do
 
       assert html =~ "Change Email"
       assert html =~ "Change Password"
+      assert html =~ "Save changes"
     end
 
     test "redirects if user is not logged in", %{conn: conn} do
@@ -206,5 +208,84 @@ defmodule TwitCloneWeb.UserSettingsLiveTest do
       assert %{"error" => message} = flash
       assert message == "You must log in to access this page."
     end
+  end
+
+  describe "update info form" do
+    setup %{conn: conn} do
+      password = valid_user_password()
+      user = user_fixture(%{password: password})
+      %{conn: log_in_user(conn, user), user: user, password: password}
+    end
+
+    test "updates the user name", %{conn: conn, user: user} do
+      new_name = valid_user_name()
+      user_id = user.id
+      {:ok, lv, _html} = live(conn, ~p"/users/settings")
+
+      result =
+        lv
+        |> form("#info_form", %{
+          "user" => %{"name" => new_name}
+        })
+        |> render_submit()
+
+      assert result =~ "Your profile has been updated."
+      assert Accounts.get_user!(user_id).name == new_name
+    end
+
+    test "renders errors without name (phx-change)", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/users/settings")
+
+      result =
+        lv
+        |> element("#info_form")
+        |> render_change(%{
+          "user" => %{"name" => ""}
+        })
+
+      assert result =~ "Save changes"
+      assert result =~ "can't be blank" |> html_escape() |> safe_to_string()
+    end
+
+    test "updates the user avatar", %{conn: conn, user: user} do
+      new_name = valid_user_name()
+      user_id = user.id
+      {:ok, lv, _html} = live(conn, ~p"/users/settings")
+
+      file_name = "test_image.jpg"
+
+      file =
+        file_input(lv, "#info_form", :avatar, [
+          %{
+            last_modified: 1_594_171_879_000,
+            name: file_name,
+            content: File.read!("test/support/test_image.jpg"),
+            type: "image/jpeg"
+          }
+        ])
+
+      render_upload(file, "test_image.jpg")
+
+      assert lv
+             |> form("#info_form", user: %{name: new_name})
+             |> render_submit()
+
+      user = Accounts.get_user!(user_id)
+
+      assert user.name =~ new_name
+      assert user.avatar =~ "/avatars/"
+      assert image_exists?(user.avatar) == true
+    end
+  end
+
+  defp image_exists?(image_path) do
+    full_path =
+      Path.join([
+        :code.priv_dir(:twit_clone),
+        "static",
+        "/#{image_path}"
+      ])
+
+    File.exists?(full_path)
   end
 end

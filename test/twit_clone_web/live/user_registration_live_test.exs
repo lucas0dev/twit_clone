@@ -2,6 +2,7 @@ defmodule TwitCloneWeb.UserRegistrationLiveTest do
   use TwitCloneWeb.ConnCase
 
   import Phoenix.LiveViewTest
+  import Phoenix.HTML
   import TwitClone.AccountsFixtures
 
   describe "Registration page" do
@@ -24,15 +25,24 @@ defmodule TwitCloneWeb.UserRegistrationLiveTest do
 
     test "renders errors for invalid data", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/users/register")
+      user = user_fixture(account_name: "account")
 
       result =
         lv
         |> element("#registration_form")
-        |> render_change(user: %{"email" => "with spaces", "password" => "too short"})
+        |> render_change(
+          user: %{
+            "email" => "with spaces",
+            "password" => "too short",
+            "account_name" => "",
+            "name" => ""
+          }
+        )
 
       assert result =~ "Register"
       assert result =~ "must have the @ sign and no spaces"
       assert result =~ "should be at least 12 character"
+      assert result =~ "can't be blank" |> html_escape() |> safe_to_string()
     end
   end
 
@@ -64,6 +74,26 @@ defmodule TwitCloneWeb.UserRegistrationLiveTest do
         lv
         |> form("#registration_form",
           user: %{"email" => user.email, "password" => "valid_password"}
+        )
+        |> render_submit()
+
+      assert result =~ "has already been taken"
+    end
+
+    test "renders errors for duplicated account_name", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/users/register")
+
+      user = user_fixture(account_name: "account")
+
+      result =
+        lv
+        |> form("#registration_form",
+          user: %{
+            "account_name" => user.account_name,
+            "password" => "valid_password",
+            email: "user@email.com",
+            name: "name"
+          }
         )
         |> render_submit()
 

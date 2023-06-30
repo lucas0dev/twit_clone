@@ -2,6 +2,7 @@ defmodule TwitCloneWeb.UserSettingsLive do
   use TwitCloneWeb, :live_view
 
   alias TwitClone.Accounts
+  import TwitCloneWeb.LiveHelpers
 
   def render(assigns) do
     ~H"""
@@ -11,6 +12,52 @@ defmodule TwitCloneWeb.UserSettingsLive do
     </.header>
 
     <div class="space-y-12 divide-y">
+      <div>
+        <.simple_form
+          for={@info_form}
+          id="info_form"
+          phx-submit="update_user"
+          phx-change="validate_info"
+        >
+          <label class="block text-sm font-semibold leading-6 text-zinc-800" for="avatar">
+            Avatar
+          </label>
+          <div>
+            <%= if @uploads.avatar.entries != [] do %>
+              <%= for entry <- @uploads.avatar.entries do %>
+                <.live_img_preview class="avatar h-32 w-32 rounded-full mb-5" entry={entry} />
+              <% end %>
+            <% else %>
+              <img class="avatar h-32 w-32 rounded-full mb-5" src={@avatar} />
+            <% end %>
+
+            <%= for entry <- @uploads.avatar.entries do %>
+              <article>
+                <button
+                  type="button"
+                  id="cancel-upload"
+                  phx-click="cancel-upload"
+                  phx-value-ref={entry.ref}
+                  aria-label="cancel"
+                >
+                  &times;
+                </button>
+              </article>
+            <% end %>
+            <.live_file_input upload={@uploads.avatar} />
+            <div
+              :for={{_num, err} <- @uploads.avatar.errors}
+              class="mt-3 flex gap-3 text-sm leading-6 text-rose-600 phx-no-feedback:hidden"
+            >
+              <%= error_to_string(err) %>
+            </div>
+          </div>
+          <.input field={@info_form[:name]} type="text" label="Name" required />
+          <:actions>
+            <.button phx-disable-with="Changing...">Save changes</.button>
+          </:actions>
+        </.simple_form>
+      </div>
       <div>
         <.simple_form
           for={@email_form}
@@ -90,15 +137,19 @@ defmodule TwitCloneWeb.UserSettingsLive do
     user = socket.assigns.current_user
     email_changeset = Accounts.change_user_email(user)
     password_changeset = Accounts.change_user_password(user)
+    info_changeset = Accounts.change_user_info(user)
 
     socket =
       socket
+      |> assign(:avatar, user.avatar)
       |> assign(:current_password, nil)
       |> assign(:email_form_current_password, nil)
       |> assign(:current_email, user.email)
       |> assign(:email_form, to_form(email_changeset))
+      |> assign(:info_form, to_form(info_changeset))
       |> assign(:password_form, to_form(password_changeset))
       |> assign(:trigger_submit, false)
+      |> allow_upload(:avatar, accept: ~w(.jpg .jpeg .png), max_entries: 1, auto_upload: true)
 
     {:ok, socket}
   end
@@ -113,6 +164,18 @@ defmodule TwitCloneWeb.UserSettingsLive do
       |> to_form()
 
     {:noreply, assign(socket, email_form: email_form, email_form_current_password: password)}
+  end
+
+  def handle_event("validate_info", params, socket) do
+    %{"user" => user_params} = params
+
+    info_form =
+      socket.assigns.current_user
+      |> Accounts.change_user_info(user_params)
+      |> Map.put(:action, :validate)
+      |> to_form()
+
+    {:noreply, assign(socket, info_form: info_form)}
   end
 
   def handle_event("update_email", params, socket) do
@@ -132,6 +195,29 @@ defmodule TwitCloneWeb.UserSettingsLive do
 
       {:error, changeset} ->
         {:noreply, assign(socket, :email_form, to_form(Map.put(changeset, :action, :insert)))}
+    end
+  end
+
+  def handle_event("update_user", params, socket) do
+    %{"user" => user_params} = params
+    user = socket.assigns.current_user
+
+    upload_response =
+      consume_uploaded_entries(socket, :avatar, fn %{path: path}, _entry ->
+        dest = Path.join([:code.priv_dir(:twit_clone), "static", "avatars", Path.basename(path)])
+        File.cp!(path, dest)
+        {:ok, ~p"/avatars/#{Path.basename(dest)}"}
+      end)
+
+    avatar_path = List.first(upload_response)
+
+    case Accounts.update_user_info(user, Map.put(user_params, "avatar", avatar_path)) do
+      {:ok, user} ->
+        info = "Your profile has been updated."
+        {:noreply, assign(socket, :avatar, user.avatar) |> put_flash(:info, info)}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, :info_form, to_form(Map.put(changeset, :action, :insert)))}
     end
   end
 
@@ -163,5 +249,9 @@ defmodule TwitCloneWeb.UserSettingsLive do
       {:error, changeset} ->
         {:noreply, assign(socket, password_form: to_form(changeset))}
     end
+  end
+
+  def handle_event("cancel-upload", %{"ref" => ref}, socket) do
+    {:noreply, cancel_upload(socket, :avatar, ref)}
   end
 end

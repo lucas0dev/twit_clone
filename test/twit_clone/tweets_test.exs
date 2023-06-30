@@ -189,4 +189,60 @@ defmodule TwitClone.TweetsTest do
     File.rm_rf(path)
     File.mkdir(path)
   end
+
+  # describe "comments" do
+  #   alias TwitClone.Tweets.Comment
+
+  #   import TwitClone.TweetsFixtures
+
+  #   @invalid_attrs %{body: nil, image: nil}
+
+  #   test "list_comments/0 returns all comments" do
+  #     comment = comment_fixture()
+  #     assert Tweets.list_comments() == [comment]
+  #   end
+
+  #   test "get_comment!/1 returns the comment with given id" do
+  #     comment = comment_fixture()
+  #     assert Tweets.get_comment!(comment.id) == comment
+  #   end
+
+  #   test "create_comment/1 with valid data creates a comment" do
+  #     valid_attrs = %{body: "some body", image: "some image"}
+
+  #     assert {:ok, %Comment{} = comment} = Tweets.create_comment(valid_attrs)
+  #     assert comment.body == "some body"
+  #     assert comment.image == "some image"
+  #   end
+
+  #   test "create_comment/1 with invalid data returns error changeset" do
+  #     assert {:error, %Ecto.Changeset{}} = Tweets.create_comment(@invalid_attrs)
+  #   end
+
+  #   test "update_comment/2 with valid data updates the comment" do
+  #     comment = comment_fixture()
+  #     update_attrs = %{body: "some updated body", image: "some updated image"}
+
+  #     assert {:ok, %Comment{} = comment} = Tweets.update_comment(comment, update_attrs)
+  #     assert comment.body == "some updated body"
+  #     assert comment.image == "some updated image"
+  #   end
+
+  #   test "update_comment/2 with invalid data returns error changeset" do
+  #     comment = comment_fixture()
+  #     assert {:error, %Ecto.Changeset{}} = Tweets.update_comment(comment, @invalid_attrs)
+  #     assert comment == Tweets.get_comment!(comment.id)
+  #   end
+
+  #   test "delete_comment/1 deletes the comment" do
+  #     comment = comment_fixture()
+  #     assert {:ok, %Comment{}} = Tweets.delete_comment(comment)
+  #     assert_raise Ecto.NoResultsError, fn -> Tweets.get_comment!(comment.id) end
+  #   end
+
+  #   test "change_comment/1 returns a comment changeset" do
+  #     comment = comment_fixture()
+  #     assert %Ecto.Changeset{} = Tweets.change_comment(comment)
+  #   end
+  # end
 end

@@ -1,6 +1,5 @@
 <.header>
-  Tweet <%= @tweet.id %>
-  <:subtitle>This is a tweet record from your database.</:subtitle>
+  <.link navigate={~p"/users/#{@tweet.user_id}"}>Show</.link>
   <:actions>
     <.link patch={~p"/tweets/#{@tweet}/edit"} phx-click={JS.push_focus()}>
       <.button>Edit tweet</.button>
@@ -8,12 +7,12 @@
   </:actions>
 </.header>
 
-<.list>
-  <:item title="Body"><%= @tweet.body %></:item>
-  <:item title="Image"><img src={@tweet.image} /></:item>
-</.list>
+<div>
+  <div class="mt-5"><%= @tweet.body %></div>
+  <div class="mt-5 w-2/3 mx-auto"><img src={@tweet.image} /></div>
+</div>
 
-<.back navigate={~p"/tweets"}>Back to tweets</.back>
+<.back navigate={~p"/"}>Back to tweets</.back>
 
 <.modal
   :if={@live_action == :edit}

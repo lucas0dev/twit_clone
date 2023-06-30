@@ -108,6 +108,10 @@ defmodule TwitClone.Accounts do
     User.email_changeset(user, attrs, validate_email: false)
   end
 
+  def change_user_info(user, attrs \\ %{}) do
+    User.info_changeset(user, attrs)
+  end
+
   @doc """
   Emulates that the email will change without actually changing
   it in the database.
@@ -126,6 +130,12 @@ defmodule TwitClone.Accounts do
     |> User.email_changeset(attrs)
     |> User.validate_current_password(password)
     |> Ecto.Changeset.apply_action(:update)
+  end
+
+  def update_user_info(user, attrs) do
+    user
+    |> User.info_changeset(attrs)
+    |> Repo.update()
   end
 
   @doc """
@@ -349,5 +359,16 @@ defmodule TwitClone.Accounts do
       {:ok, %{user: user}} -> {:ok, user}
       {:error, :user, changeset, _} -> {:error, changeset}
     end
+  end
+
+  def delete_image(path) do
+    full_path =
+      Path.join([
+        :code.priv_dir(:twit_clone),
+        "static",
+        "/#{path}"
+      ])
+
+    File.rm(full_path)
   end
 end
