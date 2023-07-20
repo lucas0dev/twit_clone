@@ -53,7 +53,8 @@ defmodule TwitClone.MixProject do
       {:plug_cowboy, "~> 2.5"},
       {:dialyxir, "~> 1.3", only: [:dev], runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:sobelow, "~> 0.12", only: [:dev, :test], runtime: false}
+      {:sobelow, "~> 0.12", only: [:dev, :test], runtime: false},
+      {:timex, "~> 3.7"}
     ]
   end
 

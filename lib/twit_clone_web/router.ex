@@ -76,7 +76,6 @@ defmodule TwitCloneWeb.Router do
       live "/users/confirm/:token", UserConfirmationLive, :edit
       live "/users/confirm", UserConfirmationInstructionsLive, :new
       live "/", TweetLive.Index, :index
-
       live "/tweets/:id", TweetLive.Show, :show
     end
   end

@@ -1,47 +1,12 @@
-<.header>
-  Listing Comments
-  <:actions>
-    <.link patch={~p"/comments/new"}>
-      <.button>New Comment</.button>
-    </.link>
-  </:actions>
-</.header>
-
-<.table
-  id="comments"
-  rows={@streams.comments}
-  row_click={fn {_id, comment} -> JS.navigate(~p"/comments/#{comment}") end}
->
-  <:col :let={{_id, comment}} label="Body"><%= comment.body %></:col>
-  <:col :let={{_id, comment}} label="Image"><%= comment.image %></:col>
-  <:action :let={{_id, comment}}>
-    <div class="sr-only">
-      <.link navigate={~p"/comments/#{comment}"}>Show</.link>
-    </div>
-    <.link patch={~p"/comments/#{comment}/edit"}>Edit</.link>
-  </:action>
-  <:action :let={{id, comment}}>
-    <.link
-      phx-click={JS.push("delete", value: %{id: comment.id}) |> hide("##{id}")}
-      data-confirm="Are you sure?"
-    >
-      Delete
-    </.link>
-  </:action>
-</.table>
-
-<.modal
-  :if={@live_action in [:new, :edit]}
-  id="comment-modal"
-  show
-  on_cancel={JS.patch(~p"/comments")}
->
+<.modal :if={@live_action in [:new, :edit]} id="comment-modal" show on_cancel={JS.patch(~p"/")}>
   <.live_component
     module={TwitCloneWeb.CommentLive.FormComponent}
-    id={@comment.id || :new}
-    title={@page_title}
-    action={@live_action}
+    id={:new}
+    tweet_id={@tweet.id}
+    user_id={@user_id}
+    action={:new}
     comment={@comment}
-    patch={~p"/comments"}
+    avatar={@avatar}
+    hidden={false}
   />
 </.modal>

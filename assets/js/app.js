@@ -39,3 +39,20 @@ liveSocket.connect()
 // >> liveSocket.disableLatencySim()
 window.liveSocket = liveSocket
 
+
+window.addEventListener("phx:add_form", (event) => {
+    let comment = document.getElementById(event.detail.to);
+    let commentForm = document.getElementById("hidden_form");
+    
+    if (comment.querySelector('#hidden_form') == null) {
+        commentForm.remove();
+        comment.append(commentForm);
+        commentForm.classList.remove("hidden");
+        commentForm.scrollIntoView({block: "center", inline: "center"});
+    commentForm.getElementsByTagName("textarea")[0].focus();
+    } else if(commentForm.classList.contains('hidden')) {
+        commentForm.classList.remove('hidden');
+        commentForm.scrollIntoView({block: "center", inline: "center"});
+        commentForm.getElementsByTagName("textarea")[0].focus();
+    }
+});

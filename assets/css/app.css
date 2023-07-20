@@ -5,7 +5,21 @@
 /* This file is for your main application CSS */
 
 @layer components {
-    .menu-item {
-        @apply text-[0.8125rem] leading-6 text-zinc-900 font-semibold hover:text-zinc-700
-    }
+    input {
+        --tw-ring-shadow: 0 0 #000 !important;
+      }
+
+    input[type="file"] {
+      white-space: normal;
+      word-wrap: break-word; 
+    } 
+
+    textarea {
+      resize: none !important;
+    } 
 }
+
+
+.click-disabled {
+  pointer-events: none;
+ }

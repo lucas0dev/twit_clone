@@ -1,5 +1,4 @@
-<.header>
-  Listing Tweets
+<.header class="pb-2">
   <:actions>
     <%= if @current_user do %>
       <.link patch={~p"/tweets/new"}>
@@ -9,27 +8,36 @@
   </:actions>
 </.header>
 
-<.table
-  id="tweets"
-  rows={@streams.tweets}
-  row_click={fn {_id, tweet} -> JS.navigate(~p"/tweets/#{tweet}") end}
->
-  <:col :let={{_id, tweet}} label="Body"><%= tweet.body %></:col>
-  <:action :let={{_id, tweet}}>
-    <div class="sr-only">
-      <.link navigate={~p"/tweets/#{tweet}"}>Show</.link>
-    </div>
-    <.link patch={~p"/tweets/#{tweet}/edit"}>Edit</.link>
-  </:action>
-  <:action :let={{id, tweet}}>
-    <.link
-      phx-click={JS.push("delete", value: %{id: tweet.id}) |> hide("##{id}")}
-      data-confirm="Are you sure?"
+<div id="tweets-container" phx-update="stream">
+  <div :for={{dom_id, tweet} <- @streams.tweets} class="flex flex-row pb-4 px-2" id={dom_id}>
+    <img class="h-12 w-12 rounded-full" src={tweet.user.avatar} />
+    <div
+      class="tweet ml-3 w-full relative border-2 rounded-md p-2 shadow-md cursor-pointer"
+      phx-click="show_tweet"
+      phx-value-tweet_id={"#{tweet.id}"}
     >
-      Delete
-    </.link>
-  </:action>
-</.table>
+      <div class="flex justify-between mb-2">
+        <div class="w-full">
+          <span class="font-serif italic"><%= tweet.user.name %></span>
+          <span class="italic font-light">@<%= tweet.user.account_name %></span>
+          <span class="font-light"><%= to_simple_date(tweet.inserted_at) %></span>
+        </div>
+        <SharedComponents.actions_button tweet_id={"#{tweet.id}"} />
+      </div>
+      <SharedComponents.tweet_actions tweet_id={"#{tweet.id}"} />
+      <div class="break-all"><%= tweet.body %></div>
+      <div class="flex justify-center ">
+        <div class="mt-5  w-fit ">
+          <img class="max-h-80  border rounded-md" src={tweet.image} />
+        </div>
+      </div>
+      <SharedComponents.tweet_actions_bar
+        comments_count={tweet.comment_count}
+        tweet_id={tweet.id}
+      />
+    </div>
+  </div>
+</div>
 
 <.modal :if={@live_action in [:new, :edit]} id="tweet-modal" show on_cancel={JS.patch(~p"/")}>
   <.live_component
@@ -40,5 +48,22 @@
     tweet={@tweet}
     user_id={@user_id}
     patch={~p"/"}
+  />
+</.modal>
+
+<.modal :if={@comment} id="comment-modal" show on_cancel={JS.patch(~p"/")}>
+  <.header>
+    Add a comment
+  </.header>
+  <.live_component
+    module={TwitCloneWeb.CommentLive.FormComponent}
+    id={:new}
+    tweet_id={@tweet_id}
+    user_id={@user_id}
+    action={:new}
+    comment={@comment}
+    avatar={@avatar}
+    hidden={false}
+    hidden_reply={false}
   />
 </.modal>

@@ -2,9 +2,13 @@ defmodule TwitClone.Tweets do
   @moduledoc false
 
   import Ecto.Query, warn: false
-  alias TwitClone.Repo
-  alias TwitClone.Tweets.Tweet
 
+  alias TwitClone.Repo
+  alias TwitClone.Tweets.Comment
+  alias TwitClone.Tweets.Tweet
+  alias TwitClone.UploadHelper
+
+  @tweet_fields Tweet.__schema__(:fields)
   @doc """
   Returns the list of tweets.
 
@@ -15,7 +19,19 @@ defmodule TwitClone.Tweets do
 
   """
   def list_tweets do
-    Repo.all(Tweet)
+    query =
+      from(t in Tweet,
+        join: u in assoc(t, :user),
+        on: t.user_id == u.id,
+        left_join: c in assoc(t, :comments),
+        preload: [user: u],
+        group_by: [t.id, u.id],
+        order_by: [desc: t.id],
+        select: map(t, @tweet_fields),
+        select_merge: %{comment_count: count(c.id)}
+      )
+
+    Repo.all(query)
   end
 
   @doc """
@@ -34,6 +50,46 @@ defmodule TwitClone.Tweets do
   """
   def get_tweet!(id), do: Repo.get!(Tweet, id)
 
+  def get_tweet_with_author(id) do
+    query =
+      from(t in Tweet,
+        where: t.id == ^id,
+        join: u in assoc(t, :user),
+        on: t.user_id == u.id,
+        left_join: c in assoc(t, :comments),
+        preload: [user: u],
+        group_by: [t.id, u.id],
+        order_by: [desc: t.id],
+        select: map(t, @tweet_fields),
+        select_merge: %{comment_count: count(c.id)}
+      )
+
+    Repo.one(query)
+  end
+
+  def get_tweet_with_assoc(id) do
+    query =
+      from tweet in Tweet,
+        where: tweet.id == ^id,
+        join: user in assoc(tweet, :user),
+        on: tweet.user_id == user.id,
+        left_join: comment in assoc(tweet, :comments),
+        on: ^id == comment.tweet_id,
+        left_join: comment_user in assoc(comment, :user),
+        on: comment.user_id == comment_user.id,
+        left_join: reply in assoc(comment, :replies),
+        on: comment.id == reply.comment_id,
+        left_join: reply_user in assoc(reply, :user),
+        on: reply.user_id == reply_user.id,
+        order_by: comment.id,
+        preload: [
+          user: user,
+          comments: {comment, user: comment_user, replies: {reply, user: reply_user}}
+        ]
+
+    Repo.one(query)
+  end
+
   @doc """
   Creates a tweet.
 
@@ -50,7 +106,9 @@ defmodule TwitClone.Tweets do
 
   """
 
-  def create_tweet(attrs \\ %{}) do
+  def create_tweet(attrs \\ %{}, user_id) do
+    attrs = Map.put(attrs, "user_id", user_id)
+
     %Tweet{}
     |> Tweet.changeset(attrs)
     |> Repo.insert()
@@ -71,8 +129,8 @@ defmodule TwitClone.Tweets do
       {:error, %{}}
 
   """
-  def update_tweet(%Tweet{} = tweet, attrs) do
-    with true <- tweet.user_id == attrs.user_id,
+  def update_tweet(%Tweet{} = tweet, attrs, user_id) do
+    with true <- tweet.user_id == user_id,
          {:ok, updated_tweet} <- Tweet.changeset(tweet, attrs) |> Repo.update() do
       maybe_delete_image(tweet, attrs)
       {:ok, updated_tweet}
@@ -138,14 +196,7 @@ defmodule TwitClone.Tweets do
   end
 
   def delete_image(path) do
-    full_path =
-      Path.join([
-        :code.priv_dir(:twit_clone),
-        "static",
-        "/#{path}"
-      ])
-
-    File.rm(full_path)
+    UploadHelper.delete_image(path)
   end
 
   defp maybe_delete_image(tweet, params) do
@@ -205,9 +256,11 @@ defmodule TwitClone.Tweets do
       {:error, %Ecto.Changeset{}}
 
   """
-  def create_comment(attrs \\ %{}) do
-    %Comment{}
-    |> Comment.changeset(attrs)
+  def create_comment(attrs \\ %{}, assoc_params) do
+    params =
+      Enum.reduce(assoc_params, attrs, fn {key, value}, acc -> Map.put(acc, key, value) end)
+
+    Comment.changeset(%Comment{}, params)
     |> Repo.insert()
   end
 

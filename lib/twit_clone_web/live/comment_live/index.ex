@@ -6,12 +6,19 @@ defmodule TwitCloneWeb.CommentLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, stream(socket, :comments, Tweets.list_comments())}
+    {:ok, stream(socket, :comments, [])}
   end
 
   @impl true
-  def handle_params(params, _url, socket) do
-    {:noreply, apply_action(socket, socket.assigns.live_action, params)}
+  def handle_params(%{"id" => tweet_id}, _, socket) do
+    tweet = Tweets.get_tweet!(tweet_id)
+    comment = %Comment{}
+
+    socket =
+      assign(socket, :tweet, tweet)
+      |> assign(:comment, comment)
+
+    {:noreply, socket}
   end
 
   defp apply_action(socket, :edit, %{"id" => id}) do

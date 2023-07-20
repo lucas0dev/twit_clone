@@ -19,7 +19,7 @@ defmodule TwitCloneWeb.TweetLive.FormComponent do
         phx-change="validate"
         phx-submit="save"
       >
-        <.input field={@form[:body]} type="text" label="Tweet" />
+        <.input field={@form[:body]} type="textarea" label="Tweet" maxlength="280" />
         <%= if @uploads.image.entries == [] do %>
           <img class="tweet-image" src={@tweet.image} />
         <% end %>
@@ -86,46 +86,11 @@ defmodule TwitCloneWeb.TweetLive.FormComponent do
     {:noreply, cancel_upload(socket, :image, ref)}
   end
 
-  defp save_tweet(socket, :edit, tweet_params) do
-    upload_response =
-      consume_uploaded_entries(socket, :image, fn %{path: path}, _entry ->
-        dest = Path.join([:code.priv_dir(:twit_clone), "static", "uploads", Path.basename(path)])
-        File.cp!(path, dest)
-        {:ok, ~p"/uploads/#{Path.basename(dest)}"}
-      end)
-
-    user_id = socket.assigns.user_id
-    image_path = List.first(upload_response)
-    ready_params = Tweets.prepare_params(tweet_params, user_id, image_path)
-
-    case Tweets.update_tweet(socket.assigns.tweet, ready_params) do
-      {:ok, tweet} ->
-        notify_parent({:saved, tweet})
-
-        {:noreply,
-         socket
-         |> put_flash(:info, "Tweet updated successfully")
-         |> push_patch(to: socket.assigns.patch)}
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        Tweets.delete_image(image_path)
-        {:noreply, assign_form(socket, changeset)}
-    end
-  end
-
   defp save_tweet(socket, :new, tweet_params) do
-    upload_response =
-      consume_uploaded_entries(socket, :image, fn %{path: path}, _entry ->
-        dest = Path.join([:code.priv_dir(:twit_clone), "static", "uploads", Path.basename(path)])
-        File.cp!(path, dest)
-        {:ok, ~p"/uploads/#{Path.basename(dest)}"}
-      end)
-
     user_id = socket.assigns.user_id
-    image_path = List.first(upload_response)
-    ready_params = Tweets.prepare_params(tweet_params, user_id, image_path)
+    tweet_params = maybe_add_uploaded_image(tweet_params, socket)
 
-    case Tweets.create_tweet(ready_params) do
+    case Tweets.create_tweet(tweet_params, user_id) do
       {:ok, tweet} ->
         notify_parent({:saved, tweet})
 
@@ -135,9 +100,43 @@ defmodule TwitCloneWeb.TweetLive.FormComponent do
          |> push_patch(to: socket.assigns.patch)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        Tweets.delete_image(image_path)
+        Tweets.delete_image(tweet_params.image)
         {:noreply, assign_form(socket, changeset)}
     end
+  end
+
+  defp save_tweet(socket, :edit, tweet_params) do
+    user_id = socket.assigns.user_id
+    tweet_params = maybe_add_uploaded_image(tweet_params, socket)
+
+    case Tweets.update_tweet(socket.assigns.tweet, tweet_params, user_id) do
+      {:ok, tweet} ->
+        notify_parent({:saved, tweet})
+
+        {:noreply,
+         socket
+         |> put_flash(:info, "Tweet updated successfully")
+         |> push_patch(to: socket.assigns.patch)}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        Tweets.delete_image(tweet_params.image)
+        {:noreply, assign_form(socket, changeset)}
+    end
+  end
+
+  defp maybe_add_uploaded_image(tweet_params, socket) do
+    response =
+      consume_uploaded_entries(socket, :image, fn %{path: path}, entry ->
+        if entry.cancelled? == false do
+          dest =
+            Path.join([:code.priv_dir(:twit_clone), "static", "uploads", Path.basename(path)])
+
+          File.cp!(path, dest)
+          {:ok, ~p"/uploads/#{Path.basename(dest)}"}
+        end
+      end)
+
+    Map.put(tweet_params, "image", List.first(response))
   end
 
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do

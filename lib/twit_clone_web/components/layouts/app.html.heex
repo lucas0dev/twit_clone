@@ -1,35 +1,41 @@
-<header class="px-4 sm:px-6 lg:px-8">
-  <div class="flex items-center justify-between border-b border-zinc-100 py-3 text-sm">
-    <div class="flex items-center gap-4">
-      <a href="/">
-        <img src={~p"/images/logo.svg"} width="36" />
-      </a>
+<div class="flex flex-row justify-center">
+  <aside class="w-1/5 flex flex-col items-end sm:px-6 lg:px-8">
+    <div class="w-full h-screen flex flex-col items-center py-3 text-sm">
+      <div class="flex items-center pb-2">
+        <a href="/">
+          <img src={~p"/images/logo.svg"} width="60" />
+        </a>
+      </div>
+      <nav class="w-full menu relative mt-2 z-10 flex flex-col items-center justify-stretch text-lg ">
+        <.link href="/" class="text-center w-full  hover:bg-amber-300"> Home </.link>
+        <%= if @current_user do %>
+          <.link href="/users/settings" class="text-center w-full  hover:bg-amber-300">
+            Settings
+          </.link>
+          <.link
+            href="/users/log_out"
+            method="delete"
+            class="text-center w-full  hover:bg-amber-300"
+          >
+            Log out
+          </.link>
+        <% else %>
+          <.link href="/users/register" class="text-centerw-full  hover:bg-amber-300">
+            Register
+          </.link>
+          <.link href="/users/log_in" class="text-centerw-full  hover:bg-amber-300">
+            Log in
+          </.link>
+        <% end %>
+      </nav>
     </div>
-    <ul class="menu relative z-10 flex items-center gap-4 px-4 sm:px-6 lg:px-8 justify-end">
-      <%= if @current_user do %>
-        <li class="text-[0.8125rem] leading-6 text-zinc-900">
-          <%= @current_user.email %>
-        </li>
-        <li>
-          <.link href="/users/settings" class="menu-item"> Settings </.link>
-        </li>
-        <li>
-          <.link href="/users/log_out" method="delete" class="menu-item"> Log out </.link>
-        </li>
-      <% else %>
-        <li>
-          <.link href="/users/register" class="menu-item"> Register </.link>
-        </li>
-        <li>
-          <.link href="/users/log_in" class="menu-item"> Log in </.link>
-        </li>
-      <% end %>
-    </ul>
-  </div>
-</header>
-<main class="px-4 py-20 sm:px-6 lg:px-8">
-  <div class="mx-auto max-w-2xl">
-    <.flash_group flash={@flash} />
-    <%= @inner_content %>
-  </div>
-</main>
+  </aside>
+
+  <main class="self-start w-2/5 py-5">
+    <div class="mx-auto ">
+      <.flash_group flash={@flash} />
+      <%= @inner_content %>
+    </div>
+  </main>
+  <aside class="w-1/5"></aside>
+</div>

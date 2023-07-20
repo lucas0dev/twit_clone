@@ -22,28 +22,30 @@ defmodule TwitCloneWeb.UserSettingsLive do
           <label class="block text-sm font-semibold leading-6 text-zinc-800" for="avatar">
             Avatar
           </label>
-          <div>
-            <%= if @uploads.avatar.entries != [] do %>
-              <%= for entry <- @uploads.avatar.entries do %>
-                <.live_img_preview class="avatar h-32 w-32 rounded-full mb-5" entry={entry} />
+          <div class="flex flex-col items-center justify-center">
+            <div>
+              <%= if @uploads.avatar.entries != [] do %>
+                <%= for entry <- @uploads.avatar.entries do %>
+                  <.live_img_preview class="avatar h-32 w-32 rounded-full mb-5" entry={entry} />
+                <% end %>
+              <% else %>
+                <img class="avatar h-32 w-32 rounded-full mb-5" src={@avatar} />
               <% end %>
-            <% else %>
-              <img class="avatar h-32 w-32 rounded-full mb-5" src={@avatar} />
-            <% end %>
 
-            <%= for entry <- @uploads.avatar.entries do %>
-              <article>
-                <button
-                  type="button"
-                  id="cancel-upload"
-                  phx-click="cancel-upload"
-                  phx-value-ref={entry.ref}
-                  aria-label="cancel"
-                >
-                  &times;
-                </button>
-              </article>
-            <% end %>
+              <%= for entry <- @uploads.avatar.entries do %>
+                <article>
+                  <button
+                    type="button"
+                    id="cancel-upload"
+                    phx-click="cancel-upload"
+                    phx-value-ref={entry.ref}
+                    aria-label="cancel"
+                  >
+                    &times;
+                  </button>
+                </article>
+              <% end %>
+            </div>
             <.live_file_input upload={@uploads.avatar} />
             <div
               :for={{_num, err} <- @uploads.avatar.errors}

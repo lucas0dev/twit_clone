@@ -4,9 +4,10 @@ defmodule TwitClone.Accounts do
   """
 
   import Ecto.Query, warn: false
-  alias TwitClone.Repo
 
+  alias TwitClone.Repo
   alias TwitClone.Accounts.{User, UserToken, UserNotifier}
+  alias TwitClone.UploadHelper
 
   ## Database getters
 
@@ -362,13 +363,6 @@ defmodule TwitClone.Accounts do
   end
 
   def delete_image(path) do
-    full_path =
-      Path.join([
-        :code.priv_dir(:twit_clone),
-        "static",
-        "/#{path}"
-      ])
-
-    File.rm(full_path)
+    UploadHelper.delete_image(path)
   end
 end
