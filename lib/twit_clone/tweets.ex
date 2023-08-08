@@ -10,12 +10,12 @@ defmodule TwitClone.Tweets do
 
   @tweet_fields Tweet.__schema__(:fields)
   @doc """
-  Returns the list of tweets.
+  Returns the list of tweets as a maps with added comment_count key and preloaded user.
 
   ## Examples
 
       iex> list_tweets()
-      [%Tweet{}, ...]
+      [%{body: tweet_body, comment_count: tweet_comment_couny, ...}, ...]
 
   """
   def list_tweets do
@@ -50,6 +50,18 @@ defmodule TwitClone.Tweets do
   """
   def get_tweet!(id), do: Repo.get!(Tweet, id)
 
+  @doc """
+  Gets a single tweet as a map with added comment_count key and preloaded user.
+
+  ## Examples
+
+      iex> get_tweet_with_author(1)
+      %{body: tweet_body, user: tweet_user, comment_count: comment_count, ...}
+
+      iex> get_tweet_with_author(456)
+      nil
+
+  """
   def get_tweet_with_author(id) do
     query =
       from(t in Tweet,
@@ -67,6 +79,18 @@ defmodule TwitClone.Tweets do
     Repo.one(query)
   end
 
+  @doc """
+  Gets a single tweet with preloaded comments and user and preloaded data of comments.
+
+  ## Examples
+
+      iex> get_tweet_with_assoc(1)
+      %{body: tweet_body, user: tweet_user, comments: comments, ...}
+
+      iex> get_tweet_with_assoc(456)
+      nil
+
+  """
   def get_tweet_with_assoc(id) do
     query =
       from tweet in Tweet,
@@ -81,11 +105,11 @@ defmodule TwitClone.Tweets do
         on: comment.id == reply.comment_id,
         left_join: reply_user in assoc(reply, :user),
         on: reply.user_id == reply_user.id,
-        order_by: comment.id,
         preload: [
           user: user,
           comments: {comment, user: comment_user, replies: {reply, user: reply_user}}
-        ]
+        ],
+        order_by: reply.id
 
     Repo.one(query)
   end
@@ -106,7 +130,7 @@ defmodule TwitClone.Tweets do
 
   """
 
-  def create_tweet(attrs \\ %{}, user_id) do
+  def create_tweet(attrs, user_id \\ nil) do
     attrs = Map.put(attrs, "user_id", user_id)
 
     %Tweet{}
@@ -136,7 +160,7 @@ defmodule TwitClone.Tweets do
       {:ok, updated_tweet}
     else
       {:error, %Ecto.Changeset{} = changeset} -> {:error, changeset}
-      _ -> {:error, %{}}
+      _ -> {:error, :wrong_user}
     end
   end
 
@@ -155,14 +179,14 @@ defmodule TwitClone.Tweets do
       {:error, %{}}
 
   """
-  def delete_tweet(%Tweet{} = tweet, user_id \\ nil) do
+  def delete_tweet(%Tweet{} = tweet, user_id) do
     with true <- tweet.user_id == user_id,
          {:ok, tweet} <- Repo.delete(tweet) do
       delete_image(tweet.image)
       {:ok, tweet}
     else
       {:error, changeset} -> {:error, changeset}
-      _ -> {:error, %{}}
+      _ -> {:error, :wrong_user}
     end
   end
 
@@ -179,54 +203,7 @@ defmodule TwitClone.Tweets do
     Tweet.changeset(tweet, attrs)
   end
 
-  def prepare_params(params, user_id, image_path) do
-    body =
-      key_to_atom(params)
-      |> Map.get(:body, nil)
-
-    params =
-      %{body: body}
-      |> Map.put(:user_id, user_id)
-
-    case image_path do
-      :delete -> Map.put(params, :image, nil)
-      nil -> params
-      new_image_path -> Map.put(params, :image, new_image_path)
-    end
-  end
-
-  def delete_image(path) do
-    UploadHelper.delete_image(path)
-  end
-
-  defp maybe_delete_image(tweet, params) do
-    case params[:image] do
-      nil -> :ok
-      _ -> delete_image(tweet.image)
-    end
-  end
-
-  defp key_to_atom(attrs) do
-    Enum.reduce(attrs, %{}, fn
-      {key, value}, acc when is_atom(key) -> Map.put(acc, key, value)
-      {key, value}, acc when is_binary(key) -> Map.put(acc, String.to_existing_atom(key), value)
-    end)
-  end
-
   alias TwitClone.Tweets.Comment
-
-  @doc """
-  Returns the list of comments.
-
-  ## Examples
-
-      iex> list_comments()
-      [%Comment{}, ...]
-
-  """
-  def list_comments do
-    Repo.all(Comment)
-  end
 
   @doc """
   Gets a single comment.
@@ -244,19 +221,32 @@ defmodule TwitClone.Tweets do
   """
   def get_comment!(id), do: Repo.get!(Comment, id)
 
+  def get_comment_with_replies(id) do
+    query =
+      from comment in Comment,
+        where: comment.id == ^id,
+        left_join: c in assoc(comment, :replies),
+        preload: [
+          replies: c
+        ],
+        order_by: c.inserted_at
+
+    Repo.one(query)
+  end
+
   @doc """
   Creates a comment.
 
   ## Examples
 
-      iex> create_comment(%{field: value})
+      iex> create_comment(%{field: value}, %{field: value})
       {:ok, %Comment{}}
 
-      iex> create_comment(%{field: bad_value})
+      iex> create_comment(%{field: bad_value}, %{field: bad_value})
       {:error, %Ecto.Changeset{}}
 
   """
-  def create_comment(attrs \\ %{}, assoc_params) do
+  def create_comment(attrs, assoc_params) do
     params =
       Enum.reduce(assoc_params, attrs, fn {key, value}, acc -> Map.put(acc, key, value) end)
 
@@ -266,20 +256,24 @@ defmodule TwitClone.Tweets do
 
   @doc """
   Updates a comment.
-
   ## Examples
 
-      iex> update_comment(comment, %{field: new_value})
+      iex> update_comment(comment, %{field: new_value}, user_id)
       {:ok, %Comment{}}
 
-      iex> update_comment(comment, %{field: bad_value})
+      iex> update_comment(comment, %{field: bad_value}, nil)
       {:error, %Ecto.Changeset{}}
 
   """
-  def update_comment(%Comment{} = comment, attrs) do
-    comment
-    |> Comment.changeset(attrs)
-    |> Repo.update()
+  def update_comment(%Comment{} = comment, attrs, user_id) do
+    with true <- comment.user_id == user_id,
+         {:ok, updated_comment} <- Comment.changeset(comment, attrs) |> Repo.update() do
+      maybe_delete_image(comment, attrs)
+      {:ok, updated_comment}
+    else
+      {:error, %Ecto.Changeset{} = changeset} -> {:error, changeset}
+      _ -> {:error, :wrong_user}
+    end
   end
 
   @doc """
@@ -294,8 +288,19 @@ defmodule TwitClone.Tweets do
       {:error, %Ecto.Changeset{}}
 
   """
-  def delete_comment(%Comment{} = comment) do
-    Repo.delete(comment)
+  def delete_comment(%Comment{} = comment, user_id) do
+    comment = get_comment_with_replies(comment.id)
+
+    with true <- comment.user_id == user_id,
+         [] <- comment.replies,
+         {:ok, comment} <- Repo.delete(comment) do
+      delete_image(comment.image)
+      {:ok, comment}
+    else
+      {:error, _changeset} -> {:error, :changeset_error}
+      false -> {:error, :wrong_user}
+      _ -> {:error, :not_allowed}
+    end
   end
 
   @doc """
@@ -309,5 +314,16 @@ defmodule TwitClone.Tweets do
   """
   def change_comment(%Comment{} = comment, attrs \\ %{}) do
     Comment.changeset(comment, attrs)
+  end
+
+  def delete_image(path) do
+    UploadHelper.delete_image(path)
+  end
+
+  defp maybe_delete_image(tweet, params) do
+    case params["image"] do
+      nil -> :ok
+      _ -> delete_image(tweet.image)
+    end
   end
 end

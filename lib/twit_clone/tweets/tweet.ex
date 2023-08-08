@@ -11,7 +11,11 @@ defmodule TwitClone.Tweets.Tweet do
     field :body, :string
     field :image, :string
     belongs_to :user, User
-    has_many :comments, Comment, foreign_key: :tweet_id
+
+    has_many :comments, Comment,
+      foreign_key: :tweet_id,
+      on_delete: :delete_all,
+      preload_order: [desc: :id]
 
     timestamps()
   end

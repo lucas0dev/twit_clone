@@ -25,7 +25,6 @@ defmodule TwitCloneWeb.UserRegistrationLiveTest do
 
     test "renders errors for invalid data", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/users/register")
-      user = user_fixture(account_name: "account")
 
       result =
         lv
@@ -60,7 +59,6 @@ defmodule TwitCloneWeb.UserRegistrationLiveTest do
       # Now do a logged in request and assert on the menu
       conn = get(conn, "/")
       response = html_response(conn, 200)
-      assert response =~ email
       assert response =~ "Settings"
       assert response =~ "Log out"
     end

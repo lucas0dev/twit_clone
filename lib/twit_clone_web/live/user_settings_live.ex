@@ -4,6 +4,8 @@ defmodule TwitCloneWeb.UserSettingsLive do
   alias TwitClone.Accounts
   import TwitCloneWeb.LiveHelpers
 
+  @default_avatar "/avatars/default_avatar.png"
+
   def render(assigns) do
     ~H"""
     <.header class="text-center">
@@ -26,27 +28,46 @@ defmodule TwitCloneWeb.UserSettingsLive do
             <div>
               <%= if @uploads.avatar.entries != [] do %>
                 <%= for entry <- @uploads.avatar.entries do %>
-                  <.live_img_preview class="avatar h-32 w-32 rounded-full mb-5" entry={entry} />
+                  <.live_img_preview
+                    class="avatar-preview avatar h-32 w-32 rounded-full mb-5"
+                    entry={entry}
+                  />
                 <% end %>
               <% else %>
                 <img class="avatar h-32 w-32 rounded-full mb-5" src={@avatar} />
               <% end %>
-
-              <%= for entry <- @uploads.avatar.entries do %>
-                <article>
+            </div>
+            <div class="flex flex-col">
+              <label class="border-2 p-1 mb-1 cursor-pointer rounded-md">
+                <.live_file_input upload={@uploads.avatar} class="hidden" /> Add new avatar
+              </label>
+              <%= if @uploads.avatar.entries != [] do %>
+                <%= for entry <- [List.first(@uploads.avatar.entries)] do %>
                   <button
                     type="button"
                     id="cancel-upload"
                     phx-click="cancel-upload"
                     phx-value-ref={entry.ref}
                     aria-label="cancel"
+                    class="border-2 p-1 rounded-md"
                   >
-                    &times;
+                    Cancel
                   </button>
-                </article>
+                <% end %>
+              <% else %>
+                <%= if !default_avatar?(@avatar) do %>
+                  <button
+                    class="border-2 p-1 rounded-md"
+                    type="button"
+                    id="remove-avatar"
+                    phx-click="remove-avatar"
+                    aria-label="remove avatar"
+                  >
+                    Remove avatar
+                  </button>
+                <% end %>
               <% end %>
             </div>
-            <.live_file_input upload={@uploads.avatar} />
             <div
               :for={{_num, err} <- @uploads.avatar.errors}
               class="mt-3 flex gap-3 text-sm leading-6 text-rose-600 phx-no-feedback:hidden"
@@ -120,6 +141,10 @@ defmodule TwitCloneWeb.UserSettingsLive do
       </div>
     </div>
     """
+  end
+
+  def default_avatar?(avatar) do
+    avatar == @default_avatar
   end
 
   def mount(%{"token" => token}, _session, socket) do
@@ -202,23 +227,27 @@ defmodule TwitCloneWeb.UserSettingsLive do
 
   def handle_event("update_user", params, socket) do
     %{"user" => user_params} = params
-    user = socket.assigns.current_user
+    user_id = socket.assigns.current_user.id
+    user = Accounts.get_user!(user_id)
+    user_params = maybe_change_avatar(socket, user_params)
 
-    upload_response =
-      consume_uploaded_entries(socket, :avatar, fn %{path: path}, _entry ->
-        dest = Path.join([:code.priv_dir(:twit_clone), "static", "avatars", Path.basename(path)])
-        File.cp!(path, dest)
-        {:ok, ~p"/avatars/#{Path.basename(dest)}"}
-      end)
-
-    avatar_path = List.first(upload_response)
-
-    case Accounts.update_user_info(user, Map.put(user_params, "avatar", avatar_path)) do
-      {:ok, user} ->
+    case Accounts.update_user_info(user, user_params) do
+      {:ok, updated_user} ->
         info = "Your profile has been updated."
-        {:noreply, assign(socket, :avatar, user.avatar) |> put_flash(:info, info)}
+
+        socket =
+          socket
+          |> assign(:remove_avatar, nil)
+          |> assign(:avatar, updated_user.avatar)
+          |> put_flash(:info, info)
+
+        {:noreply, socket}
 
       {:error, changeset} ->
+        socket =
+          socket
+          |> assign(:remove_avatar, nil)
+
         {:noreply, assign(socket, :info_form, to_form(Map.put(changeset, :action, :insert)))}
     end
   end
@@ -253,7 +282,42 @@ defmodule TwitCloneWeb.UserSettingsLive do
     end
   end
 
-  def handle_event("cancel-upload", %{"ref" => ref}, socket) do
-    {:noreply, cancel_upload(socket, :avatar, ref)}
+  def handle_event("cancel-upload", %{}, socket) do
+    socket =
+      if socket.assigns.uploads != nil do
+        Enum.reduce(socket.assigns.uploads.avatar.entries, socket, fn entry, acc ->
+          cancel_upload(acc, :avatar, entry.ref)
+        end)
+      else
+        socket
+      end
+
+    {:noreply, socket}
+  end
+
+  def handle_event("remove-avatar", _, socket) do
+    socket =
+      socket
+      |> assign(:remove_avatar, true)
+      |> assign(:avatar, @default_avatar)
+
+    {:noreply, socket}
+  end
+
+  defp maybe_change_avatar(socket, params) do
+    upload_response =
+      consume_uploaded_entries(socket, :avatar, fn %{path: path}, _entry ->
+        dest = Path.join([:code.priv_dir(:twit_clone), "static", "avatars", Path.basename(path)])
+        File.cp!(path, dest)
+        {:ok, ~p"/avatars/#{Path.basename(dest)}"}
+      end)
+
+    with nil <- socket.assigns[:remove_avatar],
+         nil <- List.first(upload_response) do
+      params
+    else
+      true -> Map.put(params, "remove-avatar", true) |> Map.put("avatar", nil)
+      avatar -> Map.put(params, "avatar", avatar)
+    end
   end
 end

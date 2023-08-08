@@ -35,6 +35,7 @@ defmodule TwitClone.AccountsFixtures do
   end
 
   def user_avatar() do
+    create_avatars_folder()
     image = "test/support/test_image.jpg"
     dest = Path.join([:code.priv_dir(:twit_clone), "static", "avatars", random_string()])
     File.cp!(image, dest)
@@ -43,5 +44,16 @@ defmodule TwitClone.AccountsFixtures do
 
   def random_string(length \\ 10) do
     :crypto.strong_rand_bytes(length) |> Base.url_encode64() |> binary_part(0, length)
+  end
+
+  def create_avatars_folder() do
+    avatars =
+      Path.join([
+        :code.priv_dir(:twit_clone),
+        "static",
+        "avatars/"
+      ])
+
+    File.mkdir(avatars)
   end
 end

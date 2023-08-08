@@ -3,111 +3,218 @@ defmodule TwitCloneWeb.CommentLiveTest do
 
   import Phoenix.LiveViewTest
   import TwitClone.TweetsFixtures
+  import TwitClone.AccountsFixtures
 
-  @create_attrs %{body: "some body", image: "some image"}
-  @update_attrs %{body: "some updated body", image: "some updated image"}
-  @invalid_attrs %{body: nil, image: nil}
+  alias TwitClone.Repo
+  alias Phoenix.LiveView
+  alias TwitClone.Tweets.Comment
 
-  defp create_comment(_) do
-    comment = comment_fixture()
-    %{comment: comment}
+  defp create_tweet_with_comments(_) do
+    tweet = tweet_fixture()
+    tweet2 = tweet_fixture()
+    user = user_fixture()
+    comment = comment_fixture(tweet_id: tweet.id, user_id: user.id)
+    comment2 = comment_fixture(tweet_id: tweet2.id)
+    comment3 = comment_fixture(comment_id: comment2.id)
+    %{comment: comment, tweet: tweet, comment3: comment3, user: user}
   end
 
-  # describe "Index" do
-  #   setup [:create_comment]
+  describe "CommentComponent" do
+    setup [:create_tweet_with_comments]
 
-  #   test "lists all comments", %{conn: conn, comment: comment} do
-  #     {:ok, _index_live, html} = live(conn, ~p"/comments")
+    test "shows tweet comments and replies to comments", %{
+      conn: conn,
+      comment: comment,
+      tweet: tweet,
+      comment3: comment3
+    } do
+      {:ok, _lv, html} = live(conn, ~p"/tweets/#{tweet.id}")
 
-  #     assert html =~ "Listing Comments"
-  #     assert html =~ comment.body
-  #   end
+      assert html =~ comment.body
+      assert html =~ comment3.body
+    end
+  end
 
-  #   test "saves new comment", %{conn: conn} do
-  #     {:ok, index_live, _html} = live(conn, ~p"/comments")
+  describe "CommentComponent when user is owner of the comment" do
+    setup [:create_tweet_with_comments]
 
-  #     assert index_live |> element("a", "New Comment") |> render_click() =~
-  #              "New Comment"
+    test "shows delete and edit button near the comment", %{
+      conn: conn,
+      user: user,
+      tweet: tweet
+    } do
+      comment = comment_fixture(tweet_id: tweet.id, user_id: user.id)
 
-  #     assert_patch(index_live, ~p"/comments/new")
+      {:ok, lv, _html} =
+        conn
+        |> log_in_user(user)
+        |> live(~p"/tweets/#{tweet.id}")
 
-  #     assert index_live
-  #            |> form("#comment-form", comment: @invalid_attrs)
-  #            |> render_change() =~ "can&#39;t be blank"
+      assert lv |> element("#comment-#{comment.id} a", "Delete") |> has_element? == true
+      assert lv |> element("#comment-#{comment.id} a", "Edit") |> has_element? == true
+    end
+  end
 
-  #     assert index_live
-  #            |> form("#comment-form", comment: @create_attrs)
-  #            |> render_submit()
+  describe "CommentComponent when user is not the owner of comment" do
+    setup [:create_tweet_with_comments]
 
-  #     assert_patch(index_live, ~p"/comments")
+    test "delete and edit buttons are absent from the comment", %{
+      conn: conn,
+      user: user,
+      tweet: tweet
+    } do
+      comment = comment_fixture(tweet_id: tweet.id)
 
-  #     html = render(index_live)
-  #     assert html =~ "Comment created successfully"
-  #     assert html =~ "some body"
-  #   end
+      {:ok, lv, _html} =
+        conn
+        |> log_in_user(user)
+        |> live(~p"/tweets/#{tweet.id}")
 
-  #   test "updates comment in listing", %{conn: conn, comment: comment} do
-  #     {:ok, index_live, _html} = live(conn, ~p"/comments")
+      assert lv |> element("#comment-#{comment.id}") |> has_element? == true
 
-  #     assert index_live |> element("#comments-#{comment.id} a", "Edit") |> render_click() =~
-  #              "Edit Comment"
+      assert lv |> element("#comment-#{comment.id} a", "Delete") |> has_element? == false
+      assert lv |> element("#comment-#{comment.id} a", "Edit") |> has_element? == false
+    end
+  end
 
-  #     assert_patch(index_live, ~p"/comments/#{comment}/edit")
+  describe "ActionsComponent when logged in user is comment owner" do
+    setup [:create_tweet_with_comments]
 
-  #     assert index_live
-  #            |> form("#comment-form", comment: @invalid_attrs)
-  #            |> render_change() =~ "can&#39;t be blank"
+    setup(assigns) do
+      socket = %LiveView.Socket{
+        endpoint: TwitCloneWeb.Endpoint,
+        assigns: %{
+          __changed__: %{},
+          flash: %{},
+          current_user: assigns.user,
+          user_id: assigns.user.id,
+          patch: "/"
+        }
+      }
 
-  #     assert index_live
-  #            |> form("#comment-form", comment: @update_attrs)
-  #            |> render_submit()
+      {:noreply, response_socket} =
+        TwitCloneWeb.CommentLive.ActionsComponent.handle_event(
+          "delete",
+          %{"id" => assigns.comment.id},
+          socket
+        )
 
-  #     assert_patch(index_live, ~p"/comments")
+      %{socket: socket, response_socket: response_socket}
+    end
 
-  #     html = render(index_live)
-  #     assert html =~ "Comment updated successfully"
-  #     assert html =~ "some updated body"
-  #   end
+    test "handle_event 'delete' deletes tweet", %{
+      comment: comment
+    } do
+      assert_raise Ecto.NoResultsError, fn -> Repo.get!(Comment, comment.id) end
+    end
 
-  #   test "deletes comment in listing", %{conn: conn, comment: comment} do
-  #     {:ok, index_live, _html} = live(conn, ~p"/comments")
+    test "handle_event 'delete' redirects to '/tweets/tweet_id' and shows info flash", %{
+      response_socket: response_socket,
+      comment: comment
+    } do
+      tweet_id = comment.tweet_id
 
-  #     assert index_live |> element("#comments-#{comment.id} a", "Delete") |> render_click()
-  #     refute has_element?(index_live, "#comments-#{comment.id}")
-  #   end
-  # end
+      assert {:live, :redirect, %{kind: :push, to: "/tweets/#{tweet_id}"}} ==
+               response_socket.redirected
 
-  # describe "Show" do
-  #   setup [:create_comment]
+      assert %{"info" => "Comment deleted"} = response_socket.assigns.flash
+    end
+  end
 
-  #   test "displays comment", %{conn: conn, comment: comment} do
-  #     {:ok, _show_live, html} = live(conn, ~p"/comments/#{comment}")
+  describe "ActionsComponent when logged in user is not the comment owner" do
+    setup do
+      tweet = tweet_fixture()
+      comment = comment_fixture(tweet_id: tweet.id)
+      user = user_fixture()
 
-  #     assert html =~ "Show Comment"
-  #     assert html =~ comment.body
-  #   end
+      socket = %LiveView.Socket{
+        endpoint: TwitCloneWeb.Endpoint,
+        assigns: %{
+          __changed__: %{},
+          flash: %{},
+          current_user: user,
+          user_id: user.id,
+          patch: "/"
+        }
+      }
 
-  #   test "updates comment within modal", %{conn: conn, comment: comment} do
-  #     {:ok, show_live, _html} = live(conn, ~p"/comments/#{comment}")
+      {:noreply, response_socket} =
+        TwitCloneWeb.CommentLive.ActionsComponent.handle_event(
+          "delete",
+          %{"id" => comment.id},
+          socket
+        )
 
-  #     assert show_live |> element("a", "Edit") |> render_click() =~
-  #              "Edit Comment"
+      %{socket: socket, response_socket: response_socket, comment: comment}
+    end
 
-  #     assert_patch(show_live, ~p"/comments/#{comment}/show/edit")
+    test "handle_event 'delete' does not delete tweet", %{
+      comment: comment
+    } do
+      assert comment == Repo.get!(Comment, comment.id)
+    end
 
-  #     assert show_live
-  #            |> form("#comment-form", comment: @invalid_attrs)
-  #            |> render_change() =~ "can&#39;t be blank"
+    test "handle_event 'delete' redirects to /tweets/tweet_id and shows :error flash",
+         %{
+           response_socket: response_socket,
+           comment: comment
+         } do
+      tweet_id = comment.tweet_id
 
-  #     assert show_live
-  #            |> form("#comment-form", comment: @update_attrs)
-  #            |> render_submit()
+      assert {:live, :redirect, %{kind: :push, to: "/tweets/#{tweet_id}"}} ==
+               response_socket.redirected
 
-  #     assert_patch(show_live, ~p"/comments/#{comment}")
+      assert %{"error" => "You can't delete someone else's comment."} =
+               response_socket.assigns.flash
+    end
+  end
 
-  #     html = render(show_live)
-  #     assert html =~ "Comment updated successfully"
-  #     assert html =~ "some updated body"
-  #   end
-  # end
+  describe "ActionsComponent when comment has any replies" do
+    setup do
+      tweet = tweet_fixture()
+      user = user_fixture()
+      comment = comment_fixture(tweet_id: tweet.id, user_id: user.id)
+      comment_fixture(tweet_id: tweet.id, comment_id: comment.id)
+
+      socket = %LiveView.Socket{
+        endpoint: TwitCloneWeb.Endpoint,
+        assigns: %{
+          __changed__: %{},
+          flash: %{},
+          current_user: user,
+          user_id: user.id,
+          patch: "/"
+        }
+      }
+
+      {:noreply, response_socket} =
+        TwitCloneWeb.CommentLive.ActionsComponent.handle_event(
+          "delete",
+          %{"id" => comment.id},
+          socket
+        )
+
+      %{socket: socket, response_socket: response_socket, comment: comment}
+    end
+
+    test "handle_event 'delete' does not delete tweet", %{
+      comment: comment
+    } do
+      assert comment == Repo.get!(Comment, comment.id)
+    end
+
+    test "handle_event 'delete' redirects to /tweets/tweet_id and shows :error flash",
+         %{
+           response_socket: response_socket,
+           comment: comment
+         } do
+      tweet_id = comment.tweet_id
+
+      assert {:live, :redirect, %{kind: :push, to: "/tweets/#{tweet_id}"}} ==
+               response_socket.redirected
+
+      assert %{"error" => "You can't delete comment with replies."} =
+               response_socket.assigns.flash
+    end
+  end
 end

@@ -8,7 +8,6 @@ defmodule TwitCloneWeb.TweetLive.Index do
   alias TwitClone.Tweets.Tweet
   alias TwitCloneWeb.SharedComponents
 
-
   @impl true
   def mount(_params, _session, socket) do
     user = socket.assigns.current_user || %{id: nil, avatar: nil}
@@ -52,39 +51,16 @@ defmodule TwitCloneWeb.TweetLive.Index do
     {:noreply, stream_insert(socket, :tweets, tweet, at: 0)}
   end
 
+  def handle_info({_, {:deleted, tweet}}, socket) do
+    {:noreply, stream_delete(socket, :tweets, tweet)}
+  end
+
   @impl true
   def handle_event("show_tweet", %{"tweet_id" => id}, socket) do
     {:noreply, push_navigate(socket, to: ~p"/tweets/#{id}")}
   end
 
-  @impl true
-  def handle_event("show_options", %{"tweet_id" => _id}, socket) do
-    {:noreply, socket}
-  end
-
-  @impl true
-  def handle_event("hide_options", %{"tweet_id" => id}, socket) do
-    hide_options(id)
-    {:noreply, socket}
-  end
-
-  @impl true
-  def handle_event("delete", %{"id" => id}, socket) do
-    tweet = Tweets.get_tweet!(id)
-    user_id = socket.assigns.user_id
-
-    case Tweets.delete_tweet(tweet, user_id) do
-      {:ok, _} ->
-        {:noreply, stream_delete(socket, :tweets, tweet)}
-
-      {:error, _} ->
-        {:noreply,
-         socket
-         |> put_flash(:error, "You can't delete someoen else's tweets.")}
-    end
-  end
-
-  def handle_event("new_comment", %{"tweet_id" => tweet_id, "value" => _}, socket) do
+  def handle_event("new_comment", %{"tweet_id" => tweet_id}, socket) do
     socket =
       assign(socket, :tweet_id, tweet_id)
       |> assign(:comment, %Comment{})
@@ -92,7 +68,15 @@ defmodule TwitCloneWeb.TweetLive.Index do
     {:noreply, socket}
   end
 
-  defp hide_options(id) do
-    JS.hide(transition: "fade-out", to: "#actions-#{id}")
+  def handle_event("redirect", _, socket) do
+    socket =
+      redirect(socket, to: "/users/log_in")
+      |> put_flash(:error, "You need to log in to do that.")
+
+    {:noreply, socket}
+  end
+
+  def tweet_owner?(user, tweet) do
+    user && user.id == tweet.user_id
   end
 end

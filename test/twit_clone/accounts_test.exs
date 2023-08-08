@@ -188,12 +188,14 @@ defmodule TwitClone.AccountsTest do
 
     test "updates user name and avatar", %{user: user} do
       name = "new name"
-      assert user.avatar != nil
+      avatar = "new_avatar"
 
-      {:ok, user} = Accounts.update_user_info(user, %{name: name, avatar: nil})
+      assert user.avatar != avatar
 
-      assert user.name == name
-      assert user.avatar == nil
+      {:ok, updated_user} = Accounts.update_user_info(user, %{name: name, avatar: avatar})
+
+      assert updated_user.name == name
+      assert updated_user.avatar == avatar
     end
   end
 

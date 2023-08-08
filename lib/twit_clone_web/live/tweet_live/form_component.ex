@@ -21,12 +21,12 @@ defmodule TwitCloneWeb.TweetLive.FormComponent do
       >
         <.input field={@form[:body]} type="textarea" label="Tweet" maxlength="280" />
         <%= if @uploads.image.entries == [] do %>
-          <img class="tweet-image" src={@tweet.image} />
+          <img class="tweet-image max-h-80 mx-auto border rounded-md" src={@tweet.image} />
         <% end %>
         <%= for entry <- @uploads.image.entries do %>
           <article>
-            <div class="image-preview">
-              <.live_img_preview entry={entry} />
+            <div class="image-preview ">
+              <.live_img_preview entry={entry} class="max-h-80 mx-auto border rounded-md" />
             </div>
             <progress value={entry.progress} max="100"><%= entry.progress %>%</progress>
             <button
@@ -65,6 +65,7 @@ defmodule TwitCloneWeb.TweetLive.FormComponent do
      socket
      |> assign(assigns)
      |> assign_form(changeset)
+     |> assign(:source, assigns.source)
      |> allow_upload(:image, accept: ~w(.jpg .jpeg .png), max_entries: 1, auto_upload: true)}
   end
 
@@ -100,26 +101,22 @@ defmodule TwitCloneWeb.TweetLive.FormComponent do
          |> push_patch(to: socket.assigns.patch)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        Tweets.delete_image(tweet_params.image)
+        Tweets.delete_image(tweet_params["image"])
         {:noreply, assign_form(socket, changeset)}
     end
   end
 
   defp save_tweet(socket, :edit, tweet_params) do
     user_id = socket.assigns.user_id
+    source = socket.assigns.source
     tweet_params = maybe_add_uploaded_image(tweet_params, socket)
 
     case Tweets.update_tweet(socket.assigns.tweet, tweet_params, user_id) do
       {:ok, tweet} ->
-        notify_parent({:saved, tweet})
-
-        {:noreply,
-         socket
-         |> put_flash(:info, "Tweet updated successfully")
-         |> push_patch(to: socket.assigns.patch)}
+        {:noreply, succesful_edit_reponse(tweet, source, socket)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        Tweets.delete_image(tweet_params.image)
+        Tweets.delete_image(tweet_params["image"])
         {:noreply, assign_form(socket, changeset)}
     end
   end
@@ -136,7 +133,24 @@ defmodule TwitCloneWeb.TweetLive.FormComponent do
         end
       end)
 
-    Map.put(tweet_params, "image", List.first(response))
+    case response do
+      [] -> tweet_params
+      _ -> Map.put(tweet_params, "image", List.first(response))
+    end
+  end
+
+  defp succesful_edit_reponse(tweet, :index, socket) do
+    notify_parent({:saved, tweet})
+
+    socket
+    |> put_flash(:info, "Tweet updated successfully")
+    |> push_patch(to: socket.assigns.patch)
+  end
+
+  defp succesful_edit_reponse(_tweet, :show, socket) do
+    socket
+    |> put_flash(:info, "Tweet updated successfully")
+    |> push_navigate(to: socket.assigns.patch)
   end
 
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do

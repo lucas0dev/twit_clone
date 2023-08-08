@@ -233,21 +233,8 @@ defmodule TwitCloneWeb.UserSettingsLiveTest do
       assert Accounts.get_user!(user_id).name == new_name
     end
 
-    test "renders errors without name (phx-change)", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, ~p"/users/settings")
-
-      result =
-        lv
-        |> element("#info_form")
-        |> render_change(%{
-          "user" => %{"name" => ""}
-        })
-
-      assert result =~ "Save changes"
-      assert result =~ "can't be blank" |> html_escape() |> safe_to_string()
-    end
-
     test "updates the user avatar", %{conn: conn, user: user} do
+      old_avatar = user.avatar
       new_name = valid_user_name()
       user_id = user.id
       {:ok, lv, _html} = live(conn, ~p"/users/settings")
@@ -274,7 +261,96 @@ defmodule TwitCloneWeb.UserSettingsLiveTest do
 
       assert user.name =~ new_name
       assert user.avatar =~ "/avatars/"
+      assert user.avatar != old_avatar
       assert image_exists?(user.avatar) == true
+    end
+
+    test "renders errors without name (phx-change)", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/users/settings")
+
+      result =
+        lv
+        |> element("#info_form")
+        |> render_change(%{
+          "user" => %{"name" => ""}
+        })
+
+      assert result =~ "Save changes"
+      assert result =~ "can't be blank" |> html_escape() |> safe_to_string()
+    end
+
+    test "when providing nil name renders error and does not update user", %{
+      conn: conn,
+      user: user
+    } do
+      user_id = user.id
+      {:ok, lv, _html} = live(conn, ~p"/users/settings")
+
+      result =
+        lv
+        |> form("#info_form", %{
+          "user" => %{"name" => nil}
+        })
+        |> render_submit()
+
+      assert result =~ "can't be blank" |> html_escape() |> safe_to_string()
+      assert Accounts.get_user!(user_id).name == user.name
+    end
+
+    test "does not update user avatar when cancel is clicked", %{conn: conn, user: user} do
+      new_name = valid_user_name()
+      old_avatar = user.avatar
+      user_id = user.id
+      {:ok, lv, _html} = live(conn, ~p"/users/settings")
+
+      file_name = "test_image.jpg"
+
+      file =
+        file_input(lv, "#info_form", :avatar, [
+          %{
+            last_modified: 1_594_171_879_000,
+            name: file_name,
+            content: File.read!("test/support/test_image.jpg"),
+            type: "image/jpeg"
+          }
+        ])
+
+      render_upload(file, "test_image.jpg")
+
+      assert lv |> element("button", "Cancel") |> render_click()
+
+      result =
+        lv
+        |> form("#info_form", user: %{name: new_name})
+        |> render_submit()
+
+      user = Accounts.get_user!(user_id)
+
+      assert result =~ "Your profile has been updated."
+      assert user.avatar =~ "/avatars/"
+      assert user.avatar == old_avatar
+      assert image_exists?(user.avatar) == true
+    end
+
+    test "removes user avatar when remove avatar is clicked", %{conn: conn, user: user} do
+      new_name = valid_user_name()
+      old_avatar = user.avatar
+      user_id = user.id
+      {:ok, lv, _html} = live(conn, ~p"/users/settings")
+
+      assert lv |> element("button", "Remove avatar") |> render_click()
+
+      result =
+        lv
+        |> form("#info_form", user: %{name: new_name})
+        |> render_submit()
+
+      user = Accounts.get_user!(user_id)
+
+      assert result =~ "Your profile has been updated."
+      assert user.avatar =~ "/avatars/"
+      assert user.avatar != old_avatar
+      assert image_exists?(old_avatar) == false
     end
   end
 

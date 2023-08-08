@@ -22,18 +22,30 @@
           <span class="italic font-light">@<%= tweet.user.account_name %></span>
           <span class="font-light"><%= to_simple_date(tweet.inserted_at) %></span>
         </div>
-        <SharedComponents.actions_button tweet_id={"#{tweet.id}"} />
+        <%= if tweet_owner?(@current_user , tweet) do %>
+          <SharedComponents.actions_button tweet_id={"#{tweet.id}"} />
+        <% end %>
       </div>
-      <SharedComponents.tweet_actions tweet_id={"#{tweet.id}"} />
+      <%= if tweet_owner?(@current_user , tweet) do %>
+        <.live_component
+          module={TwitCloneWeb.TweetLive.ActionsComponent}
+          tweet_id={tweet.id}
+          id={tweet.id}
+          user_id={@user_id}
+          source={:index}
+          patch="/"
+        />
+      <% end %>
       <div class="break-all"><%= tweet.body %></div>
       <div class="flex justify-center ">
         <div class="mt-5  w-fit ">
           <img class="max-h-80  border rounded-md" src={tweet.image} />
         </div>
       </div>
-      <SharedComponents.tweet_actions_bar
+      <SharedComponents.tweet_social_actions
         comments_count={tweet.comment_count}
         tweet_id={tweet.id}
+        user={@current_user}
       />
     </div>
   </div>
@@ -48,6 +60,7 @@
     tweet={@tweet}
     user_id={@user_id}
     patch={~p"/"}
+    source={:index}
   />
 </.modal>
 
@@ -57,7 +70,7 @@
   </.header>
   <.live_component
     module={TwitCloneWeb.CommentLive.FormComponent}
-    id={:new}
+    id={@tweet_id}
     tweet_id={@tweet_id}
     user_id={@user_id}
     action={:new}

@@ -13,9 +13,9 @@ defmodule TwitCloneWeb.Router do
     plug :fetch_current_user
   end
 
-  pipeline :api do
-    plug :accepts, ["json"]
-  end
+  # pipeline :api do
+  #   plug :accepts, ["json"]
+  # end
 
   # Other scopes may use custom stacks.
   # scope "/api", TwitCloneWeb do

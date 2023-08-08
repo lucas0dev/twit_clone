@@ -4,16 +4,27 @@
   </.link>
 </.header>
 
-<div class="flex flex-col relative pt-4 border-2 shadow-md rounded-md">
+<div id="tweet" class="flex flex-col relative pt-4 border-2 shadow-md rounded-md">
   <div class="flex flex-row items-center mb-2 px-2">
     <img class="h-12 w-12 rounded-full" src={@tweet.user.avatar} />
     <div class="flex flex-col ml-1">
       <span class="font-serif italic"><%= @tweet.user.name %></span>
       <span class="italic font-light">@<%= @tweet.user.account_name %></span>
     </div>
-    <SharedComponents.actions_button tweet_id={"#{@tweet.id}"} />
+    <%= if tweet_owner?(@current_user , @tweet) do %>
+      <SharedComponents.actions_button tweet_id={"#{@tweet.id}"} />
+    <% end %>
   </div>
-  <SharedComponents.tweet_actions tweet_id={"#{@tweet.id}"} />
+  <%= if tweet_owner?(@current_user , @tweet) do %>
+    <.live_component
+      module={TwitCloneWeb.TweetLive.ActionsComponent}
+      tweet_id={@tweet.id}
+      id={@tweet.id}
+      user_id={@user_id}
+      source={:show}
+      patch={"/tweets/#{@tweet.id}"}
+    />
+  <% end %>
   <div class="break-all text-xl px-2"><%= @tweet.body %></div>
   <%= if @tweet.image != nil do %>
     <div class="mt-5  mx-auto">
@@ -36,99 +47,30 @@
       0<span class="font-light"> likes</span>
     </span>
   </div>
-  <div class="mt-4 pb-4 w-full flex border-b-2 gap-8 justify-around">
+  <div class="mt-4 pb-4 w-full flex gap-8 justify-around">
+    <button
+      id="add-comment"
+      class="flex gap-2 items-center fill-black hover:fill-orange-600 hover:text-orange-600"
+      phx-click={JS.push("new_comment", value: %{tweet_id: @tweet.id})}
+    >
+      <div class="w-6">
+        <IconComponents.comment />
+      </div>
+    </button>
     <button class="flex gap-2 items-center fill-black hover:fill-orange-600 hover:text-orange-600">
       <div class="w-6">
-        <svg
-          version="1.1"
-          id="_x32_"
-          xmlns="http://www.w3.org/2000/svg"
-          xmlns:xlink="http://www.w3.org/1999/xlink"
-          viewBox="0 0 512 512"
-          xml:space="preserve"
-        >
-          <g stroke-width="0"></g>
-          <g stroke-linecap="round" stroke-linejoin="round"></g>
-          <g>
-            <g>
-              <path
-                class="st0"
-                d="M509.86,267.434c-2.785-4.717-7.858-7.613-13.338-7.613h-43.677v-108.21 c0.014-19.402-7.962-37.293-20.698-49.971c-12.678-12.738-30.57-20.721-49.973-20.699l-194.482-0.007 c-6.088,0-11.731,3.222-14.818,8.472c-3.089,5.243-3.178,11.738-0.222,17.062l17.55,31.65c3.792,6.828,10.99,11.072,18.795,11.072 h173.178c0.786,0.014,1.17,0.214,1.71,0.703c0.49,0.548,0.696,0.933,0.711,1.718v108.21h-43.678c-5.48,0-10.553,2.896-13.338,7.613 c-2.777,4.74-2.858,10.575-0.199,15.374l77.802,140.29c2.726,4.918,7.91,7.969,13.538,7.969s10.812-3.051,13.537-7.969 l77.802-140.29C512.719,278.009,512.637,272.174,509.86,267.434z"
-              >
-              </path>
-
-              <path
-                class="st0"
-                d="M321.791,373.873c-3.792-6.835-10.983-11.071-18.796-11.071h-173.17c-0.785-0.014-1.17-0.214-1.711-0.703 c-0.488-0.541-0.696-0.926-0.71-1.71v-108.21h43.678c5.473,0,10.553-2.896,13.337-7.613c2.778-4.74,2.859-10.575,0.201-15.374 l-77.802-140.29c-2.733-4.918-7.91-7.969-13.537-7.969c-5.629,0-10.805,3.051-13.538,7.969L1.94,229.192 c-2.658,4.798-2.577,10.634,0.2,15.374c2.785,4.717,7.865,7.613,13.338,7.613h43.678v108.21 c-0.015,19.402,7.961,37.294,20.698,49.972c12.678,12.737,30.57,20.714,49.972,20.69l194.476,0.008 c6.086,0,11.73-3.222,14.818-8.472c3.087-5.251,3.177-11.738,0.222-17.07L321.791,373.873z"
-              >
-              </path>
-            </g>
-          </g>
-        </svg>
+        <IconComponents.retweet />
       </div>
     </button>
     <button class="flex gap-2 items-center stroke-black hover:stroke-orange-600 hover:text-orange-600">
       <div class="w-6">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <g stroke-width="0"></g>
-          <g stroke-linecap="round" stroke-linejoin="round"></g>
-          <g>
-            <path
-              d="M8 10V20M8 10L4 9.99998V20L8 20M8 10L13.1956 3.93847C13.6886 3.3633 14.4642 3.11604 15.1992 3.29977L15.2467 3.31166C16.5885 3.64711 17.1929 5.21057 16.4258 6.36135L14 9.99998H18.5604C19.8225 9.99998 20.7691 11.1546 20.5216 12.3922L19.3216 18.3922C19.1346 19.3271 18.3138 20 17.3604 20L8 20"
-              stroke-width="1.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-            </path>
-          </g>
-        </svg>
+        <IconComponents.like />
       </div>
     </button>
     <button class="w-5">
-      <svg
-        viewBox="-4 0 30 30"
-        version="1.1"
-        xmlns="http://www.w3.org/2000/svg"
-        xmlns:xlink="http://www.w3.org/1999/xlink"
-        xmlns:sketch="http://www.bohemiancoding.com/sketch/ns"
-        fill="#000000"
-      >
-        <g stroke-width="0"></g>
-        <g stroke-linecap="round" stroke-linejoin="round"></g>
-        <g>
-          <title>bookmark</title>
-
-          <desc>Created with Sketch Beta.</desc>
-
-          <defs></defs>
-
-          <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" sketch:type="MSPage">
-            <g
-              sketch:type="MSLayerGroup"
-              transform="translate(-417.000000, -151.000000)"
-              fill="#000000"
-            >
-              <path
-                d="M437,177 C437,178.104 436.104,179 435,179 L428,172 L421,179 C419.896,179 419,178.104 419,177 L419,155 C419,153.896 419.896,153 421,153 L435,153 C436.104,153 437,153.896 437,155 L437,177 L437,177 Z M435,151 L421,151 C418.791,151 417,152.791 417,155 L417,177 C417,179.209 418.791,181 421,181 L428,174 L435,181 C437.209,181 439,179.209 439,177 L439,155 C439,152.791 437.209,151 435,151 L435,151 Z"
-                sketch:type="MSShapeGroup"
-              >
-              </path>
-            </g>
-          </g>
-        </g>
-      </svg>
+      <IconComponents.bookmark />
     </button>
   </div>
-  <.live_component
-    module={TwitCloneWeb.CommentLive.FormComponent}
-    id={:new}
-    tweet_id={@tweet.id}
-    user_id={@user_id}
-    action={:new}
-    comment={@comment}
-    avatar={@avatar}
-    hidden={false}
-  />
 </div>
 
 <div id="comments-container" phx-update="stream">
@@ -143,32 +85,48 @@
   </div>
 </div>
 
-<div id="hidden_form" class="flex flex-row w-full border-t-2 hidden">
+<div id="new-comment-form" class="flex flex-row w-full border-t-2 hidden">
   <.live_component
     module={TwitCloneWeb.CommentLive.FormComponent}
-    id={:temporary}
-    tweet_id={@tweet.id}
+    id={:new_comment}
+    tweet_id={@parent_tweet_id}
     user_id={@user_id}
     action={:new}
     comment={@comment}
     avatar={@avatar}
     hidden={true}
     reply_to={@reply_to}
+    patch={~p"/tweets/#{@tweet}"}
   />
 </div>
 
-<.modal
-  :if={@live_action == :edit}
-  id="tweet-modal"
-  show
-  on_cancel={JS.patch(~p"/tweets/#{@tweet}")}
->
+<%= if @selected_comment != nil do %>
+  <.modal id="edit-comment-modal">
+    <h2>Edit Comment</h2>
+    <.live_component
+      module={TwitCloneWeb.CommentLive.FormComponent}
+      id={:edit_comment}
+      title="Edit Comment"
+      user_id={@user_id}
+      action={:edit}
+      comment={@selected_comment}
+      patch={~p"/tweets/#{@tweet}"}
+      avatar={@avatar}
+      hidden={false}
+    />
+  </.modal>
+<% end %>
+
+<.modal id="edit_tweet_form">
   <.live_component
     module={TwitCloneWeb.TweetLive.FormComponent}
     id={@tweet.id}
-    title={@page_title}
-    action={@live_action}
+    title="Edit Tweet"
+    action={:edit}
+    user_id={@user_id}
     tweet={@tweet}
     patch={~p"/tweets/#{@tweet}"}
+    hidden={true}
+    source={:show}
   />
 </.modal>

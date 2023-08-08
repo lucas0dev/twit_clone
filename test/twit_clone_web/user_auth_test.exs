@@ -5,6 +5,7 @@ defmodule TwitCloneWeb.UserAuthTest do
   alias TwitClone.Accounts
   alias TwitCloneWeb.UserAuth
   import TwitClone.AccountsFixtures
+  import TwitClone.TweetsFixtures
 
   @remember_me_cookie "_twit_clone_web_user_remember_me"
 
@@ -206,6 +207,41 @@ defmodule TwitCloneWeb.UserAuthTest do
                UserAuth.on_mount(
                  :redirect_if_user_is_authenticated,
                  %{},
+                 session,
+                 %LiveView.Socket{}
+               )
+    end
+  end
+
+  describe "on_mount: :ensure_tweet_owner" do
+    test "redirects if user is not tweet owner", %{conn: conn, user: user} do
+      tweet = tweet_fixture()
+      user_token = Accounts.generate_user_session_token(user)
+      session = conn |> put_session(:user_token, user_token) |> get_session()
+
+      socket = %LiveView.Socket{
+        endpoint: TwitCloneWeb.Endpoint,
+        assigns: %{__changed__: %{}, flash: %{}}
+      }
+
+      assert {:halt, _updated_socket} =
+               UserAuth.on_mount(
+                 :ensure_tweet_owner,
+                 %{"id" => tweet.id},
+                 session,
+                 socket
+               )
+    end
+
+    test "doesn't redirect if user owns the tweet", %{conn: conn, user: user} do
+      tweet = tweet_fixture(%{}, user.id)
+      user_token = Accounts.generate_user_session_token(user)
+      session = conn |> put_session(:user_token, user_token) |> get_session()
+
+      assert {:cont, _updated_socket} =
+               UserAuth.on_mount(
+                 :ensure_tweet_owner,
+                 %{"id" => tweet.id},
                  session,
                  %LiveView.Socket{}
                )

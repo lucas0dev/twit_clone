@@ -48,7 +48,7 @@ defmodule TwitClone.Accounts.User do
     user
     |> cast(attrs, [:email, :password, :account_name, :name, :avatar])
     |> validate_email(opts)
-    |> add_avatar_if_missing()
+    |> maybe_set_default_avatar()
     |> validate_password(opts)
     |> validate_required([:account_name, :name])
     |> unique_constraint(
@@ -57,7 +57,7 @@ defmodule TwitClone.Accounts.User do
     )
   end
 
-  defp add_avatar_if_missing(changeset) do
+  defp maybe_set_default_avatar(changeset) do
     case get_field(changeset, :avatar) do
       nil -> put_change(changeset, :avatar, "/avatars/default_avatar.png")
       _ -> changeset
@@ -111,6 +111,7 @@ defmodule TwitClone.Accounts.User do
   def info_changeset(user, attrs) do
     user
     |> cast(attrs, [:avatar, :name])
+    |> maybe_set_default_avatar()
     |> validate_required([:name])
   end
 

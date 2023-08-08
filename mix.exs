@@ -9,7 +9,22 @@ defmodule TwitClone.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      deps: deps()
+      deps: deps(),
+      test_coverage: [
+        ignore_modules: [
+          TwitCloneWeb.Layouts,
+          TwitCloneWeb.PageHTML,
+          TwitCloneWeb.LiveHelpers,
+          TwitClone.Repo,
+          TwitCloneWeb.ErrorHTML,
+          TwitClone.Application,
+          TwitCloneWeb.ConnCase,
+          TwitCloneWeb.Telemetry,
+          TwitClone.AccountsFixtures,
+          TwitClone.TweetsFixtures,
+          TwitCloneWeb.CoreComponents
+        ]
+      ]
     ]
   end
 

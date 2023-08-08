@@ -15,6 +15,7 @@ defmodule TwitClone.DataCase do
   """
 
   use ExUnit.CaseTemplate
+  use Support.UploadsCleaner
 
   using do
     quote do
