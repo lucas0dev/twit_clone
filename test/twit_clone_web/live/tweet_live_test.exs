@@ -6,16 +6,22 @@ defmodule TwitCloneWeb.TweetLiveTest do
   alias TwitClone.AccountsFixtures
   alias TwitClone.Repo
   alias TwitClone.Tweets.Tweet
+  alias TwitClone.Tweets.Comment
   alias Phoenix.LiveView
 
   @create_attrs %{body: "some body"}
   @update_attrs %{body: "some updated body"}
   @invalid_attrs %{body: nil}
+  @both_blank_error "image and tweet content can&#39;t be blank at the same time"
+  @too_long_text "asdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasd
+                  asdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasd
+                  asdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasd
+                  asdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasd"
 
   defp create_tweet(_) do
     user = AccountsFixtures.user_fixture()
     user_id = user.id
-    tweet = tweet_fixture(%{}, user_id)
+    tweet = tweet_fixture(%{"image" => nil}, user_id)
     %{tweet: tweet, user_id: user_id, user: user}
   end
 
@@ -109,7 +115,7 @@ defmodule TwitCloneWeb.TweetLiveTest do
 
       assert index_live
              |> form("#tweet-form", tweet: @invalid_attrs)
-             |> render_change() =~ "can&#39;t be blank"
+             |> render_change() =~ @both_blank_error
 
       assert index_live
              |> form("#tweet-form", tweet: @create_attrs)
@@ -142,7 +148,7 @@ defmodule TwitCloneWeb.TweetLiveTest do
 
       assert index_live
              |> form("#tweet-form", tweet: @invalid_attrs)
-             |> render_change() =~ "can&#39;t be blank"
+             |> render_change() =~ @both_blank_error
 
       assert index_live
              |> form("#tweet-form", tweet: @update_attrs)
@@ -217,6 +223,32 @@ defmodule TwitCloneWeb.TweetLiveTest do
       assert html =~ "Show Tweet"
       assert html =~ tweet.body
     end
+
+    test "clicking on new #add-tweet-comment button redirects to log in", %{
+      conn: conn,
+      tweet: tweet
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/tweets/#{tweet}")
+
+      assert lv |> element("button#add-tweet-comment") |> has_element? == true
+
+      lv |> element("button#add-tweet-comment") |> render_click()
+
+      flash = assert_redirected(lv, ~p"/users/log_in")
+      assert flash["error"] == "You need to log in to do that."
+    end
+
+    test "clicking on .new-comment button redirects to log in", %{conn: conn, tweet: tweet} do
+      comment_fixture(tweet_id: tweet.id)
+      {:ok, lv, _html} = live(conn, ~p"/tweets/#{tweet}")
+
+      assert lv |> element("button.add-comment") |> has_element? == true
+
+      lv |> element("button.add-comment") |> render_click()
+
+      flash = assert_redirected(lv, ~p"/users/log_in")
+      assert flash["error"] == "You need to log in to do that."
+    end
   end
 
   describe "Show, when user is logged in" do
@@ -244,7 +276,7 @@ defmodule TwitCloneWeb.TweetLiveTest do
 
       assert lv
              |> form("#tweet-form", tweet: @invalid_attrs)
-             |> render_change() =~ "can&#39;t be blank"
+             |> render_change() =~ @both_blank_error
 
       assert lv
              |> form("#tweet-form", tweet: @update_attrs)
@@ -291,6 +323,137 @@ defmodule TwitCloneWeb.TweetLiveTest do
 
       assert lv |> element("#actions-#{another_tweet.id} a", "Delete") |> has_element? == false
     end
+
+    test "clicking on new #add-tweet-comment links new comment to tweet", %{
+      conn: conn,
+      tweet: tweet,
+      user: user
+    } do
+      {:ok, lv, _html} =
+        conn
+        |> log_in_user(user)
+        |> live(~p"/tweets/#{tweet}")
+
+      assert lv |> element("button#add-tweet-comment") |> has_element? == true
+
+      assert lv
+             |> form("#new-comment-form", comment: %{body: "comment body"})
+             |> render_submit()
+
+      assert [] = Repo.all(Comment)
+
+      assert lv
+             |> element("button#add-tweet-comment")
+             |> render_click()
+
+      assert lv
+             |> form("#new-comment-form", comment: %{body: "comment body"})
+             |> render_submit()
+
+      flash = assert_redirected(lv, ~p"/tweets/#{tweet}")
+      assert flash["info"] == "Comment created successfully"
+
+      [comment] = Repo.all(Comment)
+
+      assert comment.tweet_id == tweet.id
+      assert comment.body == "comment body"
+    end
+
+    test "clicking on new .add-comment links new comment to comment", %{
+      conn: conn,
+      tweet: tweet,
+      user: user
+    } do
+      comment_fixture(tweet_id: tweet.id)
+
+      {:ok, lv, _html} =
+        conn
+        |> log_in_user(user)
+        |> live(~p"/tweets/#{tweet}")
+
+      assert lv |> element("button.add-comment") |> has_element? == true
+
+      assert lv
+             |> form("#new-comment-form", comment: %{body: "comment body"})
+             |> render_submit()
+
+      assert [comment] = Repo.all(Comment)
+
+      assert lv
+             |> element("button.add-comment")
+             |> render_click()
+
+      assert lv
+             |> form("#new-comment-form", comment: %{body: "comment body"})
+             |> render_submit()
+
+      flash = assert_redirected(lv, ~p"/tweets/#{tweet}")
+      assert flash["info"] == "Comment created successfully"
+
+      [_, reply] = Repo.all(Comment)
+
+      assert reply.tweet_id == nil
+      assert reply.comment_id == comment.id
+      assert reply.body == "comment body"
+    end
+
+    # test "clicking on comment actions button adds comment edit modal to the view", %{
+    #   conn: conn,
+    #   user: user
+    # } do
+    #   tweet = tweet_fixture()
+    #   comment_fixture(tweet_id: tweet.id, user_id: user.id)
+
+    #   {:ok, lv, _html} =
+    #     conn
+    #     |> log_in_user(user)
+    #     |> live(~p"/tweets/#{tweet}")
+
+    #   assert lv |> element("button.actions-button") |> has_element? == true
+    #   assert lv |> element("#edit-comment-modal") |> has_element? == false
+
+    #   assert lv
+    #          |> element("button.actions-button")
+    #          |> render_click()
+
+    #   assert lv |> element("#edit-comment-modal") |> has_element? == true
+    # end
+
+    # test "clicking on comment actions button links comment to the edit form", %{
+    #   conn: conn,
+    #   user: user
+    # } do
+    #   tweet = tweet_fixture()
+    #   comment_fixture(tweet_id: tweet.id, user_id: user.id)
+
+    #   {:ok, lv, _html} =
+    #     conn
+    #     |> log_in_user(user)
+    #     |> live(~p"/tweets/#{tweet}")
+
+    #   assert lv |> element("button.actions-button") |> has_element? == true
+    #   assert lv |> element("#edit-comment-modal") |> has_element? == false
+
+    #   assert lv
+    #          |> form("#comment-form", comment: %{body: "changed body"})
+    #          |> render_submit()
+
+    #   assert [comment] = Repo.all(Comment)
+    #   assert comment.body != "changed body"
+
+    #   assert lv
+    #          |> element("button.actions-button")
+    #          |> render_click()
+
+    #   assert lv |> element("#edit-comment-modal") |> has_element? == true
+
+    #   assert lv
+    #          |> form("#comment-form", comment: %{body: "changed body"})
+    #          |> render_submit()
+
+    #   assert [comment] = Repo.all(Comment)
+    #   assert comment.body == "changed body"
+    # end
   end
 
   describe "FormComponent with action new " do
@@ -336,12 +499,10 @@ defmodule TwitCloneWeb.TweetLiveTest do
         ])
 
       assert render_upload(file, "test_image.jpg") =~ "100%"
-      assert view |> element("progress") |> has_element?()
       assert view |> element(".image-preview") |> has_element?()
 
       view |> element("#cancel-upload") |> render_click()
 
-      refute view |> element("progress") |> has_element?()
       refute view |> element(".image-preview") |> has_element?()
     end
 
@@ -405,7 +566,7 @@ defmodule TwitCloneWeb.TweetLiveTest do
       assert render_upload(file, "test_image.jpg") =~ "100%"
 
       assert view
-             |> form("#tweet-form", tweet: %{body: ""})
+             |> form("#tweet-form", tweet: %{body: @too_long_text})
              |> render_submit()
 
       assert uploaded_images_count() == count_before
@@ -438,9 +599,10 @@ defmodule TwitCloneWeb.TweetLiveTest do
 
     test "restores tweet actual image after cancel-upload event", %{
       conn: conn,
-      user: user,
-      tweet: tweet
+      user: user
     } do
+      tweet = tweet_fixture(%{}, user.id)
+
       {:ok, view, _html} =
         conn
         |> log_in_user(user)
@@ -459,12 +621,10 @@ defmodule TwitCloneWeb.TweetLiveTest do
         ])
 
       assert render_upload(file, "test_image.jpg") =~ "100%"
-      assert view |> element("progress") |> has_element?()
       assert view |> element(".image-preview") |> has_element?()
 
       view |> element("#cancel-upload") |> render_click()
 
-      refute view |> element("progress") |> has_element?()
       refute view |> element(".image-preview") |> has_element?()
       assert view |> element(".tweet-image") |> has_element?()
     end
@@ -492,12 +652,10 @@ defmodule TwitCloneWeb.TweetLiveTest do
         ])
 
       assert render_upload(file, "test_image.jpg") =~ "100%"
-      assert view |> element("progress") |> has_element?()
       assert view |> element(".image-preview") |> has_element?()
 
       view |> element("#cancel-upload") |> render_click()
 
-      refute view |> element("progress") |> has_element?()
       refute view |> element(".image-preview") |> has_element?()
     end
 
@@ -558,7 +716,7 @@ defmodule TwitCloneWeb.TweetLiveTest do
       assert render_upload(file, "test_image.jpg") =~ "100%"
 
       assert view
-             |> form("#tweet-form", tweet: %{"body" => ""})
+             |> form("#tweet-form", tweet: %{"body" => @too_long_text})
              |> render_submit()
 
       assert uploaded_images_count() == count_before

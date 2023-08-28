@@ -8,6 +8,8 @@ defmodule TwitClone.Tweets.Comment do
   alias TwitClone.Tweets.Comment
   alias TwitClone.Tweets.Tweet
 
+  @type t :: %__MODULE__{}
+
   schema "comments" do
     field :body, :string
     field :image, :string
@@ -45,7 +47,7 @@ defmodule TwitClone.Tweets.Comment do
   defp validate_tweet_and_comment(changeset) do
     with nil <- get_field(changeset, :tweet_id),
          nil <- get_field(changeset, :comment_id) do
-      add_error(changeset, :body, "comment must belong to tweet or other comment")
+      add_error(changeset, :tweet_id, "comment must belong to tweet or other comment")
     else
       _ -> changeset
     end

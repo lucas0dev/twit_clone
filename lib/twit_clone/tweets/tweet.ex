@@ -7,6 +7,8 @@ defmodule TwitClone.Tweets.Tweet do
   alias TwitClone.Accounts.User
   alias TwitClone.Tweets.Comment
 
+  @type t :: %__MODULE__{}
+
   schema "tweets" do
     field :body, :string
     field :image, :string
@@ -24,7 +26,17 @@ defmodule TwitClone.Tweets.Tweet do
   def changeset(tweet, attrs) do
     tweet
     |> cast(attrs, [:body, :user_id, :image])
-    |> validate_required([:body, :user_id])
+    |> validate_required([:user_id])
+    |> validate_image_and_body()
     |> validate_length(:body, max: 280)
+  end
+
+  defp validate_image_and_body(changeset) do
+    with nil <- get_field(changeset, :body),
+         nil <- get_field(changeset, :image) do
+      add_error(changeset, :body, "image and tweet content can't be blank at the same time")
+    else
+      _ -> changeset
+    end
   end
 end

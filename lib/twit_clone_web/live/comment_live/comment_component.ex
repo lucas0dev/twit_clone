@@ -18,11 +18,11 @@ defmodule TwitCloneWeb.CommentLive.CommentComponent do
               <div class="flex">
                 <span class="font-serif italic"><%= @comment.user.name %></span>
                 <span class="italic font-light">@<%= @comment.user.account_name %></span>
-                <%= if is_owner?(@user_id , @comment) do %>
+                <%= if is_owner?(@user, @comment) do %>
                   <button
                     phx-click={
-                      JS.show(to: "#c-actions-#{@comment.id}")
-                      |> JS.push("set_comment", value: %{comment_id: @comment.id})
+                      JS.push("set_comment", value: %{comment_id: @comment.id})
+                      |> JS.show(to: "#c-actions-#{@comment.id}")
                     }
                     class="actions-button h-6 self-end ml-auto text-white hover:outline-1 font-medium rounded-lg text-sm  text-center inline-flex justify-self-end"
                     type="button"
@@ -31,12 +31,12 @@ defmodule TwitCloneWeb.CommentLive.CommentComponent do
                   </button>
                 <% end %>
               </div>
-              <%= if is_owner?(@user_id , @comment) do %>
+              <%= if is_owner?(@user , @comment) do %>
                 <.live_component
                   module={TwitCloneWeb.CommentLive.ActionsComponent}
                   comment={@comment}
                   id={@comment.id}
-                  user_id={@user_id}
+                  user_id={@user.id}
                 />
               <% end %>
               <div class="break-all">
@@ -53,18 +53,36 @@ defmodule TwitCloneWeb.CommentLive.CommentComponent do
             <SharedComponents.comment_social_actions
               comments_count={length(@comment.replies)}
               comment_id={@comment.id}
+              user={@user}
             />
           </div>
         </div>
         <%= for reply <- @comment.replies do %>
           <div class="pl-8">
-            <div class="flex flex-row py-2 mt-4 border-t-2 px-2">
+            <div class="flex flex-row py-2 mt-4 border-t-2 relative">
               <img class="h-12 w-12 rounded-full" src={reply.user.avatar} />
               <div class="ml-2 flex flex-col w-full">
-                <div>
+                <div class="flex">
                   <span class="font-serif italic"><%= reply.user.name %></span>
                   <span class="italic font-light">@<%= reply.user.account_name %></span>
+                  <%= if is_owner?(@user, reply) do %>
+                    <button
+                      phx-click={JS.show(to: "#c-actions-#{reply.id}")}
+                      class="actions-button h-6 self-end ml-auto text-white hover:outline-1 font-medium rounded-lg text-sm  text-center inline-flex justify-self-end"
+                      type="button"
+                    >
+                      <IconComponents.three_dot />
+                    </button>
+                  <% end %>
                 </div>
+                <%= if is_owner?(@user, reply) do %>
+                  <.live_component
+                    module={TwitCloneWeb.CommentLive.ActionsComponent}
+                    comment={reply}
+                    id={reply.id}
+                    user_id={@user.id}
+                  />
+                <% end %>
                 <div class="break-all">
                   <%= reply.body %>
                 </div>
@@ -75,7 +93,11 @@ defmodule TwitCloneWeb.CommentLive.CommentComponent do
                 <% end %>
               </div>
             </div>
-            <SharedComponents.comment_social_actions comments_count={nil} comment_id={@comment.id} />
+            <SharedComponents.comment_social_actions
+              user={@user}
+              comments_count={nil}
+              comment_id={@comment.id}
+            />
           </div>
         <% end %>
       </div>
@@ -94,9 +116,9 @@ defmodule TwitCloneWeb.CommentLive.CommentComponent do
      |> allow_upload(:image, accept: ~w(.jpg .jpeg .png), max_entries: 1, auto_upload: true)}
   end
 
-  @spec is_owner?(non_neg_integer(), %Comment{}) :: boolean
-  def is_owner?(user_id, comment) do
-    user_id == comment.user_id
+  @spec is_owner?(map(), Comment.t()) :: boolean
+  def is_owner?(user, comment) do
+    user != nil && user.id == comment.user_id
   end
 
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do

@@ -27,9 +27,11 @@ defmodule TwitCloneWeb.CommentLive.ActionsComponent do
         </li>
         <li>
           <a
-            phx-click="delete"
+            phx-click={
+              JS.push("set_comment", value: %{comment_id: @comment.id})
+              |> JS.push("delete", value: %{}, target: @myself)
+            }
             phx-value-id={@comment.id}
-            phx-target={@myself}
             class="text-black block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
           >
             Delete

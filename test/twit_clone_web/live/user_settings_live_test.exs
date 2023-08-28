@@ -242,7 +242,7 @@ defmodule TwitCloneWeb.UserSettingsLiveTest do
       file_name = "test_image.jpg"
 
       file =
-        file_input(lv, "#info_form", :avatar, [
+        file_input(lv, "#info_form", :image, [
           %{
             last_modified: 1_594_171_879_000,
             name: file_name,
@@ -306,7 +306,7 @@ defmodule TwitCloneWeb.UserSettingsLiveTest do
       file_name = "test_image.jpg"
 
       file =
-        file_input(lv, "#info_form", :avatar, [
+        file_input(lv, "#info_form", :image, [
           %{
             last_modified: 1_594_171_879_000,
             name: file_name,

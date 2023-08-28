@@ -31,16 +31,26 @@ defmodule TwitCloneWeb.TweetLive.Show do
      |> assign(:page_title, page_title(socket.assigns.live_action))
      |> assign(:tweet, tweet)
      |> assign(:comment, comment)
-     |> assign(:selected_comment, nil)
      |> assign(:parent_tweet_id, nil)
      |> assign(:reply_to, nil)
      |> stream(:comments, tweet.comments)}
   end
 
   @impl true
+  def handle_event("redirect", _, socket) do
+    socket =
+      redirect(socket, to: "/users/log_in")
+      |> put_flash(:error, "You need to log in to do that.")
+
+    {:noreply, socket}
+  end
+
+  @impl true
   def handle_event("set_comment", %{"comment_id" => comment_id}, socket) do
     comment = Tweets.get_comment!(comment_id)
-    {:noreply, assign(socket, :selected_comment, comment)}
+    socket = assign(socket, :selected_comment, comment)
+
+    {:noreply, socket}
   end
 
   @impl true
@@ -49,7 +59,6 @@ defmodule TwitCloneWeb.TweetLive.Show do
       push_event(socket, "append_comment_form", %{
         to: "tweet"
       })
-      |> assign(:hidden_reply, false)
       |> assign(:reply_to, nil)
       |> assign(:parent_tweet_id, tweet_id)
 
@@ -62,16 +71,23 @@ defmodule TwitCloneWeb.TweetLive.Show do
       push_event(socket, "append_comment_form", %{
         to: "comment-#{comment_id}"
       })
-      |> assign(:hidden_reply, false)
       |> assign(:reply_to, comment_id)
       |> assign(:parent_tweet_id, nil)
 
     {:noreply, socket}
   end
 
-  @spec tweet_owner?(%User{}, %Tweet{}) :: false | nil | true
-  def tweet_owner?(user, tweet) do
-    user && user.id == tweet.user_id
+  @spec tweet_owner?(User.t(), Tweet.t()) :: false | nil | true
+  def tweet_owner?(user_id, tweet) do
+    user_id == tweet.user_id
+  end
+
+  def get_comment(assigns) do
+    if assigns[:selected_comment] do
+      assigns.selected_comment
+    else
+      %Comment{}
+    end
   end
 
   defp page_title(:show), do: "Show Tweet"
