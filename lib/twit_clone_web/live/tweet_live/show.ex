@@ -40,12 +40,14 @@ defmodule TwitCloneWeb.TweetLive.Show do
   @impl true
   def handle_event("set_comment", %{"comment_id" => comment_id}, socket) do
     comment = Tweets.get_comment!(comment_id)
+
     socket =
       push_event(socket, "show_modal", %{
         to: "edit-comment-modal"
       })
+      |> assign(:selected_comment, comment)
 
-    {:noreply, assign(socket, :selected_comment, comment)}
+    {:noreply, socket}
   end
 
   @impl true
@@ -74,7 +76,7 @@ defmodule TwitCloneWeb.TweetLive.Show do
     {:noreply, socket}
   end
 
-  @spec tweet_owner?(%User{}, %Tweet{}) :: false | nil | true
+  @spec tweet_owner?(User.t(), Tweet.t()) :: false | nil | true
   def tweet_owner?(user, tweet) do
     user && user.id == tweet.user_id
   end

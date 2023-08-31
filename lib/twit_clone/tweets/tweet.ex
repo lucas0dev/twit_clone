@@ -7,6 +7,8 @@ defmodule TwitClone.Tweets.Tweet do
   alias TwitClone.Accounts.User
   alias TwitClone.Tweets.Comment
 
+  @type t :: %__MODULE__{}
+
   schema "tweets" do
     field :body, :string
     field :image, :string

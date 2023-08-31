@@ -8,6 +8,8 @@ defmodule TwitClone.Tweets.Comment do
   alias TwitClone.Tweets.Comment
   alias TwitClone.Tweets.Tweet
 
+  @type t :: %__MODULE__{}
+
   schema "comments" do
     field :body, :string
     field :image, :string

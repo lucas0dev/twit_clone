@@ -1,8 +1,6 @@
 defmodule TwitCloneWeb.CommentLive.ActionsComponent do
   use Phoenix.LiveComponent
 
-  import TwitCloneWeb.CoreComponents, only: [show_modal: 2]
-
   alias TwitClone.Tweets
   alias Phoenix.LiveView.JS
 
@@ -19,7 +17,7 @@ defmodule TwitCloneWeb.CommentLive.ActionsComponent do
       <ul class="text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownDefaultButton">
         <li>
           <.link
-            phx-click={JS.push("set_comment", value: %{comment_id: @comment.id})  }
+            phx-click={JS.push("set_comment", value: %{comment_id: @comment.id})}
             class="text-black block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
           >
             Edit

@@ -85,7 +85,7 @@
   </div>
 </div>
 
-<div id="new-comment-form" class={"flex flex-row w-full border-t-2 hidden"} >
+<div id="new-comment-form" class="flex flex-row w-full border-t-2 hidden">
   <.live_component
     module={TwitCloneWeb.CommentLive.FormComponent}
     id={:new_comment}
@@ -99,7 +99,6 @@
     patch={~p"/tweets/#{@tweet}"}
   />
 </div>
-
 
 <.modal id="edit-comment-modal">
   <h2>Edit Comment</h2>
@@ -115,7 +114,6 @@
     hidden={false}
   />
 </.modal>
-
 
 <.modal id="edit_tweet_form">
   <.live_component

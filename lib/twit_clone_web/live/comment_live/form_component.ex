@@ -3,7 +3,6 @@ defmodule TwitCloneWeb.CommentLive.FormComponent do
 
   alias TwitClone.Tweets
   alias TwitCloneWeb.IconComponents
-  alias Phoenix.LiveView.Socket
 
   @impl true
   def render(assigns) do
@@ -163,7 +162,7 @@ defmodule TwitCloneWeb.CommentLive.FormComponent do
     end
   end
 
-  @spec image_added?(%Socket{}) :: boolean
+  @spec image_added?(map()) :: boolean
   defp image_added?(socket) do
     image_name = socket.assigns.image
     socket.assigns.uploads[image_name].entries != []
