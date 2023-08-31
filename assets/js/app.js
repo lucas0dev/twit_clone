@@ -56,3 +56,12 @@ window.addEventListener("phx:append_comment_form", (event) => {
         form.getElementsByTagName("textarea")[0].focus();
     }
 });
+
+window.addEventListener("phx:show_modal", (event) => {
+    let id = event.detail.to;
+    document.getElementById(id).style.display = 'block';
+    document.getElementById(`${id}-bg`).style.display = 'block';
+    document.getElementById(`${id}-container`).style.display = 'block';
+    document.body.classList.add("overflow-hidden");
+    document.getElementById(`${id}-content`).getElementsByTagName("textarea")[0].focus();
+});

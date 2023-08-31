@@ -31,7 +31,7 @@ defmodule TwitCloneWeb.TweetLive.Show do
      |> assign(:page_title, page_title(socket.assigns.live_action))
      |> assign(:tweet, tweet)
      |> assign(:comment, comment)
-     |> assign(:selected_comment, nil)
+     |> assign(:selected_comment, %Comment{})
      |> assign(:parent_tweet_id, nil)
      |> assign(:reply_to, nil)
      |> stream(:comments, tweet.comments)}
@@ -40,6 +40,11 @@ defmodule TwitCloneWeb.TweetLive.Show do
   @impl true
   def handle_event("set_comment", %{"comment_id" => comment_id}, socket) do
     comment = Tweets.get_comment!(comment_id)
+    socket =
+      push_event(socket, "show_modal", %{
+        to: "edit-comment-modal"
+      })
+
     {:noreply, assign(socket, :selected_comment, comment)}
   end
 

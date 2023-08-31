@@ -85,7 +85,7 @@
   </div>
 </div>
 
-<div id="new-comment-form" class="flex flex-row w-full border-t-2 hidden">
+<div id="new-comment-form" class={"flex flex-row w-full border-t-2 hidden"} >
   <.live_component
     module={TwitCloneWeb.CommentLive.FormComponent}
     id={:new_comment}
@@ -100,22 +100,22 @@
   />
 </div>
 
-<%= if @selected_comment != nil do %>
-  <.modal id="edit-comment-modal">
-    <h2>Edit Comment</h2>
-    <.live_component
-      module={TwitCloneWeb.CommentLive.FormComponent}
-      id={:edit_comment}
-      title="Edit Comment"
-      user_id={@user_id}
-      action={:edit}
-      comment={@selected_comment}
-      patch={~p"/tweets/#{@tweet}"}
-      avatar={@avatar}
-      hidden={false}
-    />
-  </.modal>
-<% end %>
+
+<.modal id="edit-comment-modal">
+  <h2>Edit Comment</h2>
+  <.live_component
+    module={TwitCloneWeb.CommentLive.FormComponent}
+    id={:edit_comment}
+    title="Edit Comment"
+    user_id={@user_id}
+    action={:edit}
+    comment={@selected_comment}
+    patch={~p"/tweets/#{@tweet}"}
+    avatar={@avatar}
+    hidden={false}
+  />
+</.modal>
+
 
 <.modal id="edit_tweet_form">
   <.live_component

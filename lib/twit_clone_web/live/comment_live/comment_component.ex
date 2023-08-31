@@ -22,7 +22,7 @@ defmodule TwitCloneWeb.CommentLive.CommentComponent do
                   <button
                     phx-click={
                       JS.show(to: "#c-actions-#{@comment.id}")
-                      |> JS.push("set_comment", value: %{comment_id: @comment.id})
+
                     }
                     class="actions-button h-6 self-end ml-auto text-white hover:outline-1 font-medium rounded-lg text-sm  text-center inline-flex justify-self-end"
                     type="button"
