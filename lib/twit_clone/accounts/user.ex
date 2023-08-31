@@ -4,6 +4,7 @@ defmodule TwitClone.Accounts.User do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias TwitClone.Accounts.User
   alias TwitClone.Tweets.Comment
   alias TwitClone.Tweets.Tweet
 
@@ -19,6 +20,16 @@ defmodule TwitClone.Accounts.User do
     field :avatar, :string
     has_many :tweets, Tweet, on_delete: :delete_all
     has_many :comments, Comment, foreign_key: :user_id
+
+    many_to_many :followed,
+                 User,
+                 join_through: Relationship,
+                 join_keys: [followed_id: :id, follower_id: :id]
+
+    many_to_many :followers,
+                 User,
+                 join_through: Relationship,
+                 join_keys: [follower_id: :id, followed_id: :id]
 
     timestamps()
   end

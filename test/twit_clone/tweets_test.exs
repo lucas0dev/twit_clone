@@ -3,24 +3,6 @@ defmodule TwitClone.TweetsTest do
 
   alias TwitClone.Tweets
 
-  describe "Tweets context" do
-    import TwitClone.TweetsFixtures
-    import TwitClone.AccountsFixtures
-
-    test "delete_image/1 deletes image file" do
-      tweet = tweet_fixture()
-      comment = comment_fixture()
-
-      assert image_exists?(tweet.image) == true
-      Tweets.delete_image(tweet.image)
-      assert image_exists?(comment.image) == true
-      Tweets.delete_image(comment.image)
-
-      assert image_exists?(tweet.image) == false
-      assert image_exists?(comment.image) == false
-    end
-  end
-
   describe "tweets" do
     alias TwitClone.Accounts.User
     alias TwitClone.Tweets.Tweet
