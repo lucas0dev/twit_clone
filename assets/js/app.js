@@ -40,21 +40,28 @@ liveSocket.connect()
 window.liveSocket = liveSocket
 
 
+
 window.addEventListener("phx:append_comment_form", (event) => {
     let parent = document.getElementById(event.detail.to);
-    let form = document.getElementById("new-comment-form");
+    let formContainer = document.getElementById("comment-form-container");
     
-    if (parent.querySelector('#new-comment-form') == null) {
-        form.remove();
-        parent.append(form);
-        form.classList.remove("hidden");
-        form.scrollIntoView({block: "center", inline: "center"});
-    form.getElementsByTagName("textarea")[0].focus();
-    } else if(form.classList.contains('hidden')) {
-        form.classList.remove('hidden');
-        form.scrollIntoView({block: "center", inline: "center"});
-        form.getElementsByTagName("textarea")[0].focus();
+    if (parent.querySelector('#comment-form-container') == null) {
+      formContainer.remove();
+      parent.append(formContainer);
+      formContainer.classList.remove("hidden");
+      formContainer.scrollIntoView({block: "center", inline: "center"});
+      formContainer.getElementsByTagName("textarea")[0].focus();
+    } else if(formContainer.classList.contains('hidden')) {
+      formContainer.classList.remove('hidden');
+      formContainer.scrollIntoView({block: "center", inline: "center"});
+      formContainer.getElementsByTagName("textarea")[0].focus();
     }
+});
+
+window.addEventListener("phx:validate_form", (event) => {
+  document.getElementById(event.detail.to).dispatchEvent(
+    new Event("input", {bubbles: true})
+  )
 });
 
 window.addEventListener("phx:show_modal", (event) => {

@@ -49,9 +49,15 @@
   </div>
   <div class="mt-4 pb-4 w-full flex gap-8 justify-around">
     <button
-      id="add-comment"
+      id="add-tweet-comment"
       class="flex gap-2 items-center fill-black hover:fill-orange-600 hover:text-orange-600"
-      phx-click={JS.push("new_comment", value: %{tweet_id: @tweet.id})}
+      phx-click={
+        if @current_user do
+          JS.push("new_comment", value: %{tweet_id: @tweet.id})
+        else
+          "redirect"
+        end
+      }
     >
       <div class="w-6">
         <IconComponents.comment />
@@ -79,25 +85,10 @@
       module={TwitCloneWeb.CommentLive.CommentComponent}
       id={comment.id}
       comment={comment}
-      user_id={@user_id}
+      user={@current_user}
       avatar={@avatar}
     />
   </div>
-</div>
-
-<div id="new-comment-form" class="flex flex-row w-full border-t-2 hidden">
-  <.live_component
-    module={TwitCloneWeb.CommentLive.FormComponent}
-    id={:new_comment}
-    tweet_id={@parent_tweet_id}
-    user_id={@user_id}
-    action={:new}
-    comment={@comment}
-    avatar={@avatar}
-    hidden={true}
-    reply_to={@reply_to}
-    patch={~p"/tweets/#{@tweet}"}
-  />
 </div>
 
 <.modal id="edit-comment-modal">
@@ -114,6 +105,21 @@
     hidden={false}
   />
 </.modal>
+
+<div id="comment-form-container" class="flex flex-row w-full border-t-2 hidden">
+  <.live_component
+    module={TwitCloneWeb.CommentLive.FormComponent}
+    id={:new_comment}
+    tweet_id={@parent_tweet_id}
+    user_id={@user_id}
+    action={:new}
+    comment={@comment}
+    avatar={@avatar}
+    hidden={true}
+    reply_to={@reply_to}
+    patch={~p"/tweets/#{@tweet}"}
+  />
+</div>
 
 <.modal id="edit_tweet_form">
   <.live_component

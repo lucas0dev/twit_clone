@@ -2,6 +2,7 @@ defmodule TwitCloneWeb.TweetLive.FormComponent do
   use TwitCloneWeb, :live_component
 
   alias TwitClone.Tweets
+  alias TwitCloneWeb.TweetLive.UploadsComponent
 
   @impl true
   def render(assigns) do
@@ -19,35 +20,33 @@ defmodule TwitCloneWeb.TweetLive.FormComponent do
         phx-change="validate"
         phx-submit="save"
       >
-        <.input field={@form[:body]} type="textarea" label="Tweet" maxlength="280" />
-        <%= if @uploads.image.entries == [] do %>
-          <img class="tweet-image max-h-80 mx-auto border rounded-md" src={@tweet.image} />
+        <.input id="tweet-body" field={@form[:body]} type="textarea" label="Tweet" maxlength="280" />
+        <%= if @uploads.image.entries == [] && @tweet_image != nil do %>
+          <img class="tweet-image max-h-80 mx-auto border rounded-md" src={@tweet_image} />
         <% end %>
-        <%= for entry <- @uploads.image.entries do %>
-          <article>
-            <div class="image-preview ">
-              <.live_img_preview entry={entry} class="max-h-80 mx-auto border rounded-md" />
+        <div class="mx-auto">
+          <.live_component
+            module={UploadsComponent}
+            uploads={@uploads}
+            id={"upload_#{random_string(6)}"}
+            validate_target="tweet-body"
+            preview_class="max-h-80 mx-auto"
+            input_label="Add image"
+          />
+          <%= if @tweet_image != nil do %>
+            <div class="w-fit mx-auto">
+              <button
+                class="border-2 p-1 rounded-md w-full"
+                type="button"
+                id="remove-image"
+                phx-click="remove-image"
+                aria-label="remove image"
+                phx-target={@myself}
+              >
+                Remove image
+              </button>
             </div>
-            <progress value={entry.progress} max="100"><%= entry.progress %>%</progress>
-            <button
-              type="button"
-              id="cancel-upload"
-              phx-click="cancel-upload"
-              phx-target={@myself}
-              phx-value-ref={entry.ref}
-              aria-label="cancel"
-            >
-              &times;
-            </button>
-          </article>
-        <% end %>
-        <.live_file_input upload={@uploads.image} />
-
-        <div
-          :for={{_num, err} <- @uploads.image.errors}
-          class="mt-3 flex gap-3 text-sm leading-6 text-rose-600 phx-no-feedback:hidden"
-        >
-          <%= error_to_string(err) %>
+          <% end %>
         </div>
         <:actions>
           <.button phx-disable-with="Saving...">Save Tweet</.button>
@@ -64,6 +63,7 @@ defmodule TwitCloneWeb.TweetLive.FormComponent do
     {:ok,
      socket
      |> assign(assigns)
+     |> assign(:tweet_image, tweet.image)
      |> assign_form(changeset)
      |> assign(:source, assigns.source)
      |> allow_upload(:image, accept: ~w(.jpg .jpeg .png), max_entries: 1, auto_upload: true)}
@@ -71,6 +71,9 @@ defmodule TwitCloneWeb.TweetLive.FormComponent do
 
   @impl true
   def handle_event("validate", %{"tweet" => tweet_params}, socket) do
+    image_name = if UploadsComponent.image_added?(socket), do: "temporary_name", else: nil
+    tweet_params = Map.put(tweet_params, "image", image_name)
+
     changeset =
       socket.assigns.tweet
       |> Tweets.change_tweet(tweet_params)
@@ -83,13 +86,18 @@ defmodule TwitCloneWeb.TweetLive.FormComponent do
     save_tweet(socket, socket.assigns.action, tweet_params)
   end
 
-  def handle_event("cancel-upload", %{"ref" => ref}, socket) do
-    {:noreply, cancel_upload(socket, :image, ref)}
+  def handle_event("remove-image", _, socket) do
+    socket =
+      socket
+      |> assign(:remove_image, true)
+      |> assign(:tweet_image, nil)
+
+    {:noreply, socket}
   end
 
   defp save_tweet(socket, :new, tweet_params) do
     user_id = socket.assigns.user_id
-    tweet_params = maybe_add_uploaded_image(tweet_params, socket)
+    tweet_params = UploadsComponent.maybe_update_image(socket, tweet_params, "image")
 
     case Tweets.create_tweet(tweet_params, user_id) do
       {:ok, tweet} ->
@@ -109,33 +117,16 @@ defmodule TwitCloneWeb.TweetLive.FormComponent do
   defp save_tweet(socket, :edit, tweet_params) do
     user_id = socket.assigns.user_id
     source = socket.assigns.source
-    tweet_params = maybe_add_uploaded_image(tweet_params, socket)
+    tweet_params = UploadsComponent.maybe_update_image(socket, tweet_params, "image")
 
     case Tweets.update_tweet(socket.assigns.tweet, tweet_params, user_id) do
       {:ok, tweet} ->
+        socket = assign(socket, :tweet_image, tweet.image)
         {:noreply, succesful_edit_reponse(tweet, source, socket)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         Tweets.delete_image(tweet_params["image"])
         {:noreply, assign_form(socket, changeset)}
-    end
-  end
-
-  defp maybe_add_uploaded_image(tweet_params, socket) do
-    response =
-      consume_uploaded_entries(socket, :image, fn %{path: path}, entry ->
-        if entry.cancelled? == false do
-          dest =
-            Path.join([:code.priv_dir(:twit_clone), "static", "uploads", Path.basename(path)])
-
-          File.cp!(path, dest)
-          {:ok, ~p"/uploads/#{Path.basename(dest)}"}
-        end
-      end)
-
-    case response do
-      [] -> tweet_params
-      _ -> Map.put(tweet_params, "image", List.first(response))
     end
   end
 
@@ -159,6 +150,9 @@ defmodule TwitCloneWeb.TweetLive.FormComponent do
 
   defp notify_parent(msg), do: send(self(), {__MODULE__, msg})
 
-  defp error_to_string(:not_accepted), do: "You have selected an unacceptable file type"
-  defp error_to_string(:too_many_files), do: "You have selected too many files"
+  defp random_string(bytes_count) do
+    bytes_count
+    |> :crypto.strong_rand_bytes()
+    |> Base.url_encode64(padding: false)
+  end
 end

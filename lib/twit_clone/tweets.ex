@@ -6,7 +6,7 @@ defmodule TwitClone.Tweets do
   alias TwitClone.Repo
   alias TwitClone.Tweets.Comment
   alias TwitClone.Tweets.Tweet
-  alias TwitClone.UploadHelper
+  alias TwitClone.MaybeDeleteImageService
 
   @tweet_fields Tweet.__schema__(:fields)
   @doc """
@@ -156,7 +156,7 @@ defmodule TwitClone.Tweets do
   def update_tweet(%Tweet{} = tweet, attrs, user_id) do
     with true <- tweet.user_id == user_id,
          {:ok, updated_tweet} <- Tweet.changeset(tweet, attrs) |> Repo.update() do
-      maybe_delete_image(tweet, attrs)
+      MaybeDeleteImageService.run(tweet.image, attrs)
       {:ok, updated_tweet}
     else
       {:error, %Ecto.Changeset{} = changeset} -> {:error, changeset}
@@ -268,7 +268,7 @@ defmodule TwitClone.Tweets do
   def update_comment(%Comment{} = comment, attrs, user_id) do
     with true <- comment.user_id == user_id,
          {:ok, updated_comment} <- Comment.changeset(comment, attrs) |> Repo.update() do
-      maybe_delete_image(comment, attrs)
+      MaybeDeleteImageService.run(comment.image, attrs)
       {:ok, updated_comment}
     else
       {:error, %Ecto.Changeset{} = changeset} -> {:error, changeset}
@@ -317,13 +317,6 @@ defmodule TwitClone.Tweets do
   end
 
   def delete_image(path) do
-    UploadHelper.delete_image(path)
-  end
-
-  defp maybe_delete_image(tweet, params) do
-    case params["image"] do
-      nil -> :ok
-      _ -> delete_image(tweet.image)
-    end
+    MaybeDeleteImageService.run(path)
   end
 end

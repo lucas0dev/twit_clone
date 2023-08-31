@@ -6,8 +6,10 @@ defmodule TwitCloneWeb.CommentLiveTest do
   import TwitClone.AccountsFixtures
 
   alias TwitClone.Repo
+  alias TwitClone.Tweets
   alias Phoenix.LiveView
   alias TwitClone.Tweets.Comment
+  alias TwitCloneWeb.CommentLive.CommentComponent
 
   defp create_tweet_with_comments(_) do
     tweet = tweet_fixture()
@@ -20,18 +22,37 @@ defmodule TwitCloneWeb.CommentLiveTest do
   end
 
   describe "CommentComponent" do
-    setup [:create_tweet_with_comments]
+    setup do
+      tweet = tweet_fixture()
+      comment = comment_fixture(tweet_id: tweet.id)
+      comment_fixture(comment_id: comment.id)
+      user = user_fixture()
+      tweet = Tweets.get_tweet_with_assoc(tweet.id)
+      comment_with_replies = List.first(tweet.comments)
+      comment_reply = List.first(comment_with_replies.replies)
+
+      rendered_component =
+        render_component(CommentComponent,
+          id: 123,
+          comment: comment_with_replies,
+          user: user,
+          avatar: user.avatar
+        )
+
+      %{
+        rendered_component: rendered_component,
+        reply: comment_reply,
+        comment: comment_with_replies
+      }
+    end
 
     test "shows tweet comments and replies to comments", %{
-      conn: conn,
-      comment: comment,
-      tweet: tweet,
-      comment3: comment3
+      rendered_component: rendered_component,
+      reply: reply,
+      comment: comment
     } do
-      {:ok, _lv, html} = live(conn, ~p"/tweets/#{tweet.id}")
-
-      assert html =~ comment.body
-      assert html =~ comment3.body
+      assert rendered_component =~ reply.body
+      assert rendered_component =~ comment.body
     end
   end
 
@@ -39,41 +60,69 @@ defmodule TwitCloneWeb.CommentLiveTest do
     setup [:create_tweet_with_comments]
 
     test "shows delete and edit button near the comment", %{
-      conn: conn,
       user: user,
       tweet: tweet
     } do
-      comment = comment_fixture(tweet_id: tweet.id, user_id: user.id)
+      tweet = Tweets.get_tweet_with_assoc(tweet.id)
+      comment = List.first(tweet.comments)
 
-      {:ok, lv, _html} =
-        conn
-        |> log_in_user(user)
-        |> live(~p"/tweets/#{tweet.id}")
+      result =
+        render_component(CommentComponent,
+          id: 123,
+          comment: comment,
+          user: user,
+          avatar: user.avatar
+        )
 
-      assert lv |> element("#comment-#{comment.id} a", "Delete") |> has_element? == true
-      assert lv |> element("#comment-#{comment.id} a", "Edit") |> has_element? == true
+      assert result =~ "Delete"
+      assert result =~ "Edit"
+    end
+  end
+
+  describe "CommentComponent when user is owner of the reply to comment" do
+    setup [:create_tweet_with_comments]
+
+    test "shows delete and edit button near the reply", %{
+      user: user,
+      tweet: tweet
+    } do
+      tweet_comment = comment_fixture(tweet_id: tweet.id)
+      comment_fixture(user_id: user.id, comment_id: tweet_comment.id)
+      tweet = Tweets.get_tweet_with_assoc(tweet.id)
+      comment = Enum.find(tweet.comments, nil, fn comment -> comment.id == tweet_comment.id end)
+
+      result =
+        render_component(CommentComponent,
+          id: 123,
+          comment: comment,
+          user: user,
+          avatar: user.avatar
+        )
+
+      assert result =~ "Delete"
+      assert result =~ "Edit"
     end
   end
 
   describe "CommentComponent when user is not the owner of comment" do
-    setup [:create_tweet_with_comments]
+    test "delete and edit buttons are absent from the comment", %{} do
+      user = user_fixture()
+      tweet = tweet_fixture()
+      tweet_comment = comment_fixture(tweet_id: tweet.id)
+      comment_fixture(comment_id: tweet_comment.id)
+      tweet = Tweets.get_tweet_with_assoc(tweet.id)
+      comment = Enum.find(tweet.comments, nil, fn comment -> comment.id == tweet_comment.id end)
 
-    test "delete and edit buttons are absent from the comment", %{
-      conn: conn,
-      user: user,
-      tweet: tweet
-    } do
-      comment = comment_fixture(tweet_id: tweet.id)
+      result =
+        render_component(CommentComponent,
+          id: 123,
+          comment: comment,
+          user: user,
+          avatar: user.avatar
+        )
 
-      {:ok, lv, _html} =
-        conn
-        |> log_in_user(user)
-        |> live(~p"/tweets/#{tweet.id}")
-
-      assert lv |> element("#comment-#{comment.id}") |> has_element? == true
-
-      assert lv |> element("#comment-#{comment.id} a", "Delete") |> has_element? == false
-      assert lv |> element("#comment-#{comment.id} a", "Edit") |> has_element? == false
+      refute result =~ "Delete"
+      refute result =~ "Edit"
     end
   end
 
@@ -215,6 +264,59 @@ defmodule TwitCloneWeb.CommentLiveTest do
 
       assert %{"error" => "You can't delete comment with replies."} =
                response_socket.assigns.flash
+    end
+  end
+
+  describe "FormComponent" do
+    setup do
+      tweet = tweet_fixture()
+      user = user_fixture()
+
+      %{tweet: tweet, user: user}
+    end
+
+    test "creates new comment", %{conn: conn, tweet: tweet, user: user} do
+      {:ok, view, _html} =
+        conn
+        |> log_in_user(user)
+        |> live(~p"/tweets/#{tweet.id}")
+
+      assert view
+             |> element("#add-tweet-comment")
+             |> render_click()
+
+      assert view
+             |> form("#new-comment-form", comment: %{"body" => "asdqwe"})
+             |> render_submit()
+
+      [comment] = Repo.all(Comment)
+      assert comment.body == "asdqwe"
+      assert comment.comment_id == nil
+      assert comment.tweet_id == tweet.id
+    end
+
+    test "creates new reply to comment", %{conn: conn, tweet: tweet, user: user} do
+      comment = comment_fixture(tweet_id: tweet.id)
+
+      {:ok, view, _html} =
+        conn
+        |> log_in_user(user)
+        |> live(~p"/tweets/#{tweet.id}")
+
+      assert view
+             |> element("button.add-comment")
+             |> render_click()
+
+      assert view
+             |> form("#new-comment-form", comment: %{"body" => "qweqwe"})
+             |> render_submit()
+
+      comments = Repo.all(Comment)
+      new_comment = List.last(comments)
+
+      assert new_comment.body == "qweqwe"
+      assert new_comment.comment_id == comment.id
+      assert new_comment.tweet_id == nil
     end
   end
 end

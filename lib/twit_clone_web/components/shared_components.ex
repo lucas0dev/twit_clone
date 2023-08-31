@@ -56,13 +56,20 @@ defmodule TwitCloneWeb.SharedComponents do
 
   attr :comments_count, :any, required: true
   attr :comment_id, :string, required: true
+  attr :user, :map, required: true
 
   def comment_social_actions(assigns) do
     ~H"""
     <div class="mt-4 w-full flex gap-8 justify-evenly">
       <button
-        class="flex gap-2 items-center fill-black hover:fill-orange-600 hover:text-orange-600"
-        phx-click={JS.push("new_comment", value: %{comment_id: @comment_id})}
+        class="add-comment flex gap-2 items-center fill-black hover:fill-orange-600 hover:text-orange-600"
+        phx-click={
+          if @user do
+            JS.push("new_comment", value: %{comment_id: @comment_id})
+          else
+            "redirect"
+          end
+        }
       >
         <div class="w-4">
           <IconComponents.comment />

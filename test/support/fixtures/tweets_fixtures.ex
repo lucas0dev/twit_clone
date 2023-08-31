@@ -11,10 +11,18 @@ defmodule TwitClone.TweetsFixtures do
   """
   def tweet_fixture(attrs \\ %{}, user_id \\ nil) do
     user_id = user_id || AccountsFixtures.user_fixture().id
-    image = "test/support/test_image.jpg"
-    dest = Path.join([:code.priv_dir(:twit_clone), "static", "uploads", random_string()])
-    File.cp!(image, dest)
-    path = "/uploads/#{Path.basename(dest)}"
+    image = Map.get(attrs, "image", "test/support/test_image.jpg")
+
+    path =
+      case image do
+        nil ->
+          ""
+
+        _ ->
+          dest = Path.join([:code.priv_dir(:twit_clone), "static", "uploads", random_string()])
+          File.cp!(image, dest)
+          "/uploads/#{Path.basename(dest)}"
+      end
 
     {:ok, tweet} =
       attrs

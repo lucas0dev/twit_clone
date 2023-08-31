@@ -5,7 +5,7 @@ defmodule Support.UploadsCleaner do
 
   defmacro __using__(_opts) do
     quote do
-      setup_all do
+      setup do
         on_exit(fn -> delete_images() end)
       end
 

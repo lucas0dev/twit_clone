@@ -70,13 +70,13 @@
   </.header>
   <.live_component
     module={TwitCloneWeb.CommentLive.FormComponent}
-    id={@tweet_id}
+    id={"new-comment-#{@tweet_id}"}
     tweet_id={@tweet_id}
     user_id={@user_id}
     action={:new}
     comment={@comment}
     avatar={@avatar}
     hidden={false}
-    hidden_reply={false}
+    patch={~p"/"}
   />
 </.modal>

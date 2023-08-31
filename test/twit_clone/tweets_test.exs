@@ -29,7 +29,7 @@ defmodule TwitClone.TweetsTest do
     import TwitClone.TweetsFixtures
     import TwitClone.AccountsFixtures
 
-    @invalid_attrs %{"body" => nil}
+    @invalid_attrs %{"body" => nil, "image" => nil}
 
     test "list_tweets/0 returns all tweets" do
       tweet = tweet_fixture()
@@ -134,6 +134,21 @@ defmodule TwitClone.TweetsTest do
       assert updated_tweet.body == "some updated body"
       assert old_image == updated_tweet.image
       assert image_exists?(old_image) == true
+    end
+
+    test "update_tweet/3 with remove-image param true deletes the image" do
+      tweet = tweet_fixture()
+      update_attrs = %{"body" => "some updated body", "remove-image" => true, "image" => nil}
+      old_image = tweet.image
+
+      assert image_exists?(old_image) == true
+
+      assert {:ok, %Tweet{} = updated_tweet} =
+               Tweets.update_tweet(tweet, update_attrs, tweet.user_id)
+
+      assert updated_tweet.body == "some updated body"
+      assert updated_tweet.image == nil
+      assert image_exists?(old_image) == false
     end
 
     test "update_tweet/3 with invalid data returns error changeset" do

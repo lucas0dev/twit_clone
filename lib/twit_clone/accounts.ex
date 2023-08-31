@@ -7,7 +7,7 @@ defmodule TwitClone.Accounts do
 
   alias TwitClone.Repo
   alias TwitClone.Accounts.{User, UserToken, UserNotifier}
-  alias TwitClone.UploadHelper
+  alias TwitClone.MaybeDeleteImageService
 
   ## Database getters
 
@@ -135,7 +135,7 @@ defmodule TwitClone.Accounts do
 
   def update_user_info(user, attrs) do
     {response, _} = result = User.info_changeset(user, attrs) |> Repo.update()
-    if response == :ok, do: maybe_delete_avatar(user, attrs)
+    if response == :ok, do: MaybeDeleteImageService.run(user.avatar, attrs)
 
     result
   end
@@ -363,16 +363,7 @@ defmodule TwitClone.Accounts do
     end
   end
 
-  @spec delete_image(any) :: :ok | {:error, atom}
-  def delete_image(path) do
-    UploadHelper.delete_image(path)
-  end
-
-  defp maybe_delete_avatar(user, params) do
-    cond do
-      params["remove-avatar"] == true -> delete_image(user.avatar)
-      params["avatar"] != nil -> delete_image(user.avatar)
-      true -> :ok
-    end
+  def delete_avatar(path) do
+    MaybeDeleteImageService.run(path)
   end
 end
