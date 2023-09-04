@@ -6,7 +6,6 @@ defmodule TwitCloneWeb.SharedComponents do
   alias __MODULE__
   alias Phoenix.LiveView.JS
 
-  import TwitCloneWeb.CoreComponents, only: [show_modal: 1]
   alias TwitCloneWeb.IconComponents
 
   attr :tweet_id, :string, required: true
@@ -36,7 +35,7 @@ defmodule TwitCloneWeb.SharedComponents do
         class="new-comment flex gap-2 items-center fill-black hover:fill-orange-600 hover:text-orange-600"
         phx-click={
           if @user do
-            show_modal("comment-modal") |> JS.push("new_comment", value: %{tweet_id: @tweet_id})
+            JS.push("new_comment", value: %{tweet_id: @tweet_id})
           else
             "redirect"
           end

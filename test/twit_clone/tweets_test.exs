@@ -15,7 +15,7 @@ defmodule TwitClone.TweetsTest do
 
     test "list_tweets/0 returns all tweets" do
       tweet = tweet_fixture()
-      result = Tweets.list_tweets()
+      result = Tweets.all_tweets()
 
       assert length(result) == 1
       assert List.first(result).id == tweet.id
@@ -37,7 +37,7 @@ defmodule TwitClone.TweetsTest do
 
     test "get_tweet_with_assoc/1 returns tweet map with user struct and comments list" do
       tweet = tweet_fixture()
-      comment = comment_fixture(tweet_id: tweet.id)
+      comment = comment_fixture(parent_tweet_id: tweet.id)
       result = Tweets.get_tweet_with_assoc(tweet.id)
 
       assert result.id == tweet.id
@@ -214,7 +214,7 @@ defmodule TwitClone.TweetsTest do
       user = user_fixture()
 
       {:ok, comment} =
-        Tweets.create_comment(@valid_attrs, %{"tweet_id" => tweet.id, "user_id" => user.id})
+        Tweets.create_comment(@valid_attrs, %{"parent_tweet_id" => tweet.id, "user_id" => user.id})
 
       assert comment.body == @valid_attrs["body"]
     end
@@ -227,7 +227,7 @@ defmodule TwitClone.TweetsTest do
         Tweets.create_comment(@invalid_attrs, %{"tweet_id" => tweet.id, "user_id" => user.id})
 
       assert {:error, %Ecto.Changeset{}} = result
-      assert Repo.all(Comment) == []
+      assert Tweets.get_comments() == []
     end
 
     test "create_comment/2 with invalid assoc params does not create a new comment" do
@@ -235,7 +235,7 @@ defmodule TwitClone.TweetsTest do
       result = Tweets.create_comment(@valid_attrs, %{"tweet_id" => tweet.id, "user_id" => nil})
 
       assert {:error, %Ecto.Changeset{}} = result
-      assert Repo.all(Comment) == []
+      assert Tweets.get_comments() == []
     end
 
     test "update_comment/3 with valid params updates a comment" do

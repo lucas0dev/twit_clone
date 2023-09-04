@@ -34,6 +34,7 @@ defmodule TwitCloneWeb.CommentLive.CommentComponent do
                   comment={@comment}
                   id={@comment.id}
                   user_id={@user.id}
+                  path={@path}
                 />
               <% end %>
               <div class="break-all">
@@ -78,6 +79,7 @@ defmodule TwitCloneWeb.CommentLive.CommentComponent do
                     comment={reply}
                     id={reply.id}
                     user_id={@user.id}
+                    path={@path}
                   />
                 <% end %>
                 <div class="break-all">

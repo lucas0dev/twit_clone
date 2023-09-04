@@ -87,6 +87,7 @@
       comment={comment}
       user={@current_user}
       avatar={@avatar}
+      path={"/tweets/#{@tweet.id}"}
     />
   </div>
 </div>
@@ -110,13 +111,12 @@
   <.live_component
     module={TwitCloneWeb.CommentLive.FormComponent}
     id={:new_comment}
-    tweet_id={@parent_tweet_id}
+    parent_tweet_id={@parent_tweet_id}
     user_id={@user_id}
     action={:new}
     comment={@comment}
     avatar={@avatar}
     hidden={true}
-    reply_to={@reply_to}
     patch={~p"/tweets/#{@tweet}"}
   />
 </div>

@@ -18,9 +18,20 @@ defmodule TwitClone.Tweets do
       [%{body: tweet_body, comment_count: tweet_comment_couny, ...}, ...]
 
   """
+
+  def all_tweets do
+    query =
+      from t in TwitClone.Tweets.Tweet,
+        where: is_nil(t.parent_tweet_id),
+        select: t
+
+    Repo.all(query)
+  end
+
   def list_tweets do
     query =
       from(t in Tweet,
+        where: is_nil(t.parent_tweet_id),
         join: u in assoc(t, :user),
         on: t.user_id == u.id,
         left_join: c in assoc(t, :comments),
@@ -91,25 +102,22 @@ defmodule TwitClone.Tweets do
       nil
 
   """
-  def get_tweet_with_assoc(id) do
+  def get_tweet_with_assoc(tweet_id) do
     query =
-      from tweet in Tweet,
-        where: tweet.id == ^id,
-        join: user in assoc(tweet, :user),
-        on: tweet.user_id == user.id,
-        left_join: comment in assoc(tweet, :comments),
-        on: ^id == comment.tweet_id,
-        left_join: comment_user in assoc(comment, :user),
-        on: comment.user_id == comment_user.id,
-        left_join: reply in assoc(comment, :replies),
-        on: comment.id == reply.comment_id,
-        left_join: reply_user in assoc(reply, :user),
-        on: reply.user_id == reply_user.id,
+      from t in Tweet,
+        where: t.id == ^tweet_id,
+        left_join: c in Comment,
+        on: c.parent_tweet_id == t.id,
+        left_join: r in Comment,
+        on: r.parent_tweet_id == c.id,
+        left_join: user_t in assoc(t, :user),
+        left_join: user_c in assoc(c, :user),
+        left_join: user_r in assoc(r, :user),
         preload: [
-          user: user,
-          comments: {comment, user: comment_user, replies: {reply, user: reply_user}}
+          comments: {c, [replies: {r, user: user_r}, user: user_c]},
+          user: user_t
         ],
-        order_by: reply.id
+        order_by: [desc: c.inserted_at]
 
     Repo.one(query)
   end
@@ -204,6 +212,16 @@ defmodule TwitClone.Tweets do
   end
 
   alias TwitClone.Tweets.Comment
+
+  def get_comments() do
+    query =
+      from c in Comment,
+        where: not is_nil(c.parent_tweet_id),
+        select: c,
+        order_by: [asc: c.id]
+
+    Repo.all(query)
+  end
 
   @doc """
   Gets a single comment.

@@ -132,9 +132,8 @@ defmodule TwitCloneWeb.CommentLive.FormComponent do
 
     assoc_params =
       %{}
-      |> Map.put("comment_id", socket.assigns[:reply_to])
       |> Map.put("user_id", socket.assigns.user_id)
-      |> Map.put("tweet_id", socket.assigns.tweet_id)
+      |> Map.put("parent_tweet_id", socket.assigns.parent_tweet_id)
 
     case Tweets.create_comment(comment_params, assoc_params) do
       {:ok, _comment} ->

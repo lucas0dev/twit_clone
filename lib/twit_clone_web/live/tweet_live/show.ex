@@ -24,7 +24,7 @@ defmodule TwitCloneWeb.TweetLive.Show do
   @impl true
   def handle_params(%{"id" => id}, _, socket) do
     tweet = Tweets.get_tweet_with_assoc(id)
-    comment = %Comment{tweet_id: tweet.id}
+    comment = %Comment{parent_tweet_id: tweet.id}
 
     {:noreply,
      socket
@@ -33,7 +33,6 @@ defmodule TwitCloneWeb.TweetLive.Show do
      |> assign(:comment, comment)
      |> assign(:selected_comment, %Comment{})
      |> assign(:parent_tweet_id, nil)
-     |> assign(:reply_to, nil)
      |> stream(:comments, tweet.comments)}
   end
 
@@ -51,10 +50,10 @@ defmodule TwitCloneWeb.TweetLive.Show do
     comment = Tweets.get_comment!(comment_id)
 
     socket =
-      push_event(socket, "show_modal", %{
+      assign(socket, :selected_comment, comment)
+      |> push_event("show_modal", %{
         to: "edit-comment-modal"
       })
-      |> assign(:selected_comment, comment)
 
     {:noreply, socket}
   end
@@ -65,7 +64,6 @@ defmodule TwitCloneWeb.TweetLive.Show do
       push_event(socket, "append_comment_form", %{
         to: "tweet"
       })
-      |> assign(:reply_to, nil)
       |> assign(:parent_tweet_id, tweet_id)
 
     {:noreply, socket}
@@ -77,8 +75,7 @@ defmodule TwitCloneWeb.TweetLive.Show do
       push_event(socket, "append_comment_form", %{
         to: "comment-#{comment_id}"
       })
-      |> assign(:reply_to, comment_id)
-      |> assign(:parent_tweet_id, nil)
+      |> assign(:parent_tweet_id, comment_id)
 
     {:noreply, socket}
   end

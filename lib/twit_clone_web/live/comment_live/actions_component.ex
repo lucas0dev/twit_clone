@@ -25,10 +25,7 @@ defmodule TwitCloneWeb.CommentLive.ActionsComponent do
         </li>
         <li>
           <a
-            phx-click={
-              JS.push("set_comment", value: %{comment_id: @comment.id})
-              |> JS.push("delete", value: %{}, target: @myself)
-            }
+            phx-click={JS.push("delete", value: %{id: @comment.id}, target: @myself)}
             phx-value-id={@comment.id}
             class="text-black block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
           >
@@ -41,11 +38,12 @@ defmodule TwitCloneWeb.CommentLive.ActionsComponent do
   end
 
   @impl true
-  def update(%{comment: comment, user_id: user_id} = _assigns, socket) do
+  def update(%{comment: comment, user_id: user_id} = assigns, socket) do
     socket =
       socket
       |> assign(:user_id, user_id)
       |> assign(:comment, comment)
+      |> assign(:path, assigns.path)
 
     {:ok, socket}
   end
@@ -64,7 +62,7 @@ defmodule TwitCloneWeb.CommentLive.ActionsComponent do
         {:noreply,
          socket
          |> put_flash(:error, error_to_string(msg))
-         |> push_navigate(to: "/tweets/#{comment.tweet_id}")}
+         |> push_navigate(to: socket.assigns.path)}
     end
   end
 
@@ -73,7 +71,7 @@ defmodule TwitCloneWeb.CommentLive.ActionsComponent do
 
     socket
     |> put_flash(:info, "Comment deleted")
-    |> push_navigate(to: "/tweets/#{comment.tweet_id}")
+    |> push_navigate(to: socket.assigns.path)
   end
 
   defp notify_parent(msg), do: send(self(), {__MODULE__, msg})

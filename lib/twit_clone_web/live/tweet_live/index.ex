@@ -17,6 +17,7 @@ defmodule TwitCloneWeb.TweetLive.Index do
       |> assign(:avatar, user.avatar)
       |> assign(:tweet_id, nil)
       |> assign(:comment, nil)
+      |> assign(:parent_tweet_id, nil)
 
     {:ok, stream(socket, :tweets, Tweets.list_tweets())}
   end
@@ -62,8 +63,11 @@ defmodule TwitCloneWeb.TweetLive.Index do
 
   def handle_event("new_comment", %{"tweet_id" => tweet_id}, socket) do
     socket =
-      assign(socket, :tweet_id, tweet_id)
+      assign(socket, :parent_tweet_id, tweet_id)
       |> assign(:comment, %Comment{})
+      |> push_event("show_modal", %{
+        to: "comment-modal"
+      })
 
     {:noreply, socket}
   end

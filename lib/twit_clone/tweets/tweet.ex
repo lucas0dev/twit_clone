@@ -15,7 +15,7 @@ defmodule TwitClone.Tweets.Tweet do
     belongs_to :user, User
 
     has_many :comments, Comment,
-      foreign_key: :tweet_id,
+      foreign_key: :parent_tweet_id,
       on_delete: :delete_all,
       preload_order: [desc: :id]
 

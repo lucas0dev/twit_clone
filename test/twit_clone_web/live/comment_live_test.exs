@@ -15,17 +15,17 @@ defmodule TwitCloneWeb.CommentLiveTest do
     tweet = tweet_fixture()
     tweet2 = tweet_fixture()
     user = user_fixture()
-    comment = comment_fixture(tweet_id: tweet.id, user_id: user.id)
-    comment2 = comment_fixture(tweet_id: tweet2.id)
-    comment3 = comment_fixture(comment_id: comment2.id)
+    comment = comment_fixture(parent_tweet_id: tweet.id, user_id: user.id)
+    comment2 = comment_fixture(parent_tweet_id: tweet2.id)
+    comment3 = comment_fixture(parent_tweet_id: comment2.id)
     %{comment: comment, tweet: tweet, comment3: comment3, user: user}
   end
 
   describe "CommentComponent" do
     setup do
       tweet = tweet_fixture()
-      comment = comment_fixture(tweet_id: tweet.id)
-      comment_fixture(comment_id: comment.id)
+      comment = comment_fixture(parent_tweet_id: tweet.id)
+      comment_fixture(parent_tweet_id: comment.id)
       user = user_fixture()
       tweet = Tweets.get_tweet_with_assoc(tweet.id)
       comment_with_replies = List.first(tweet.comments)
@@ -71,7 +71,8 @@ defmodule TwitCloneWeb.CommentLiveTest do
           id: 123,
           comment: comment,
           user: user,
-          avatar: user.avatar
+          avatar: user.avatar,
+          path: "/tweets/#{tweet.id}"
         )
 
       assert result =~ "Delete"
@@ -86,8 +87,8 @@ defmodule TwitCloneWeb.CommentLiveTest do
       user: user,
       tweet: tweet
     } do
-      tweet_comment = comment_fixture(tweet_id: tweet.id)
-      comment_fixture(user_id: user.id, comment_id: tweet_comment.id)
+      tweet_comment = comment_fixture(parent_tweet_id: tweet.id)
+      comment_fixture(user_id: user.id, parent_tweet_id: tweet_comment.id)
       tweet = Tweets.get_tweet_with_assoc(tweet.id)
       comment = Enum.find(tweet.comments, nil, fn comment -> comment.id == tweet_comment.id end)
 
@@ -96,7 +97,8 @@ defmodule TwitCloneWeb.CommentLiveTest do
           id: 123,
           comment: comment,
           user: user,
-          avatar: user.avatar
+          avatar: user.avatar,
+          path: "/tweets/#{tweet.id}"
         )
 
       assert result =~ "Delete"
@@ -108,8 +110,8 @@ defmodule TwitCloneWeb.CommentLiveTest do
     test "delete and edit buttons are absent from the comment", %{} do
       user = user_fixture()
       tweet = tweet_fixture()
-      tweet_comment = comment_fixture(tweet_id: tweet.id)
-      comment_fixture(comment_id: tweet_comment.id)
+      tweet_comment = comment_fixture(parent_tweet_id: tweet.id)
+      comment_fixture(parent_tweet_id: tweet_comment.id)
       tweet = Tweets.get_tweet_with_assoc(tweet.id)
       comment = Enum.find(tweet.comments, nil, fn comment -> comment.id == tweet_comment.id end)
 
@@ -118,7 +120,8 @@ defmodule TwitCloneWeb.CommentLiveTest do
           id: 123,
           comment: comment,
           user: user,
-          avatar: user.avatar
+          avatar: user.avatar,
+          path: "/tweets/#{tweet.id}"
         )
 
       refute result =~ "Delete"
@@ -137,7 +140,8 @@ defmodule TwitCloneWeb.CommentLiveTest do
           flash: %{},
           current_user: assigns.user,
           user_id: assigns.user.id,
-          patch: "/"
+          patch: "/",
+          path: "/tweets/#{assigns.tweet.id}"
         }
       }
 
@@ -161,7 +165,7 @@ defmodule TwitCloneWeb.CommentLiveTest do
       response_socket: response_socket,
       comment: comment
     } do
-      tweet_id = comment.tweet_id
+      tweet_id = comment.parent_tweet_id
 
       assert {:live, :redirect, %{kind: :push, to: "/tweets/#{tweet_id}"}} ==
                response_socket.redirected
@@ -173,7 +177,7 @@ defmodule TwitCloneWeb.CommentLiveTest do
   describe "ActionsComponent when logged in user is not the comment owner" do
     setup do
       tweet = tweet_fixture()
-      comment = comment_fixture(tweet_id: tweet.id)
+      comment = comment_fixture(parent_tweet_id: tweet.id)
       user = user_fixture()
 
       socket = %LiveView.Socket{
@@ -183,7 +187,8 @@ defmodule TwitCloneWeb.CommentLiveTest do
           flash: %{},
           current_user: user,
           user_id: user.id,
-          patch: "/"
+          patch: "/",
+          path: "/tweets/#{tweet.id}"
         }
       }
 
@@ -208,7 +213,7 @@ defmodule TwitCloneWeb.CommentLiveTest do
            response_socket: response_socket,
            comment: comment
          } do
-      tweet_id = comment.tweet_id
+      tweet_id = comment.parent_tweet_id
 
       assert {:live, :redirect, %{kind: :push, to: "/tweets/#{tweet_id}"}} ==
                response_socket.redirected
@@ -222,8 +227,8 @@ defmodule TwitCloneWeb.CommentLiveTest do
     setup do
       tweet = tweet_fixture()
       user = user_fixture()
-      comment = comment_fixture(tweet_id: tweet.id, user_id: user.id)
-      comment_fixture(tweet_id: tweet.id, comment_id: comment.id)
+      comment = comment_fixture(parent_tweet_id: tweet.id, user_id: user.id)
+      comment_fixture(parent_tweet_id: comment.id)
 
       socket = %LiveView.Socket{
         endpoint: TwitCloneWeb.Endpoint,
@@ -232,7 +237,8 @@ defmodule TwitCloneWeb.CommentLiveTest do
           flash: %{},
           current_user: user,
           user_id: user.id,
-          patch: "/"
+          patch: "/",
+          path: "/tweets/#{tweet.id}"
         }
       }
 
@@ -246,7 +252,7 @@ defmodule TwitCloneWeb.CommentLiveTest do
       %{socket: socket, response_socket: response_socket, comment: comment}
     end
 
-    test "handle_event 'delete' does not delete tweet", %{
+    test "handle_event 'delete' does not delete comment", %{
       comment: comment
     } do
       assert comment == Repo.get!(Comment, comment.id)
@@ -257,7 +263,7 @@ defmodule TwitCloneWeb.CommentLiveTest do
            response_socket: response_socket,
            comment: comment
          } do
-      tweet_id = comment.tweet_id
+      tweet_id = comment.parent_tweet_id
 
       assert {:live, :redirect, %{kind: :push, to: "/tweets/#{tweet_id}"}} ==
                response_socket.redirected
@@ -289,14 +295,14 @@ defmodule TwitCloneWeb.CommentLiveTest do
              |> form("#new-comment-form", comment: %{"body" => "asdqwe"})
              |> render_submit()
 
-      [comment] = Repo.all(Comment)
+      [comment] = Tweets.get_comments()
       assert comment.body == "asdqwe"
-      assert comment.comment_id == nil
-      assert comment.tweet_id == tweet.id
+      assert comment.parent_tweet_id == tweet.id
     end
 
     test "creates new reply to comment", %{conn: conn, tweet: tweet, user: user} do
-      comment = comment_fixture(tweet_id: tweet.id)
+      comment = comment_fixture(parent_tweet_id: tweet.id)
+      body = "comment body"
 
       {:ok, view, _html} =
         conn
@@ -308,15 +314,14 @@ defmodule TwitCloneWeb.CommentLiveTest do
              |> render_click()
 
       assert view
-             |> form("#new-comment-form", comment: %{"body" => "qweqwe"})
+             |> form("#new-comment-form", comment: %{"body" => body})
              |> render_submit()
 
-      comments = Repo.all(Comment)
+      comments = Tweets.get_comments()
       new_comment = List.last(comments)
 
-      assert new_comment.body == "qweqwe"
-      assert new_comment.comment_id == comment.id
-      assert new_comment.tweet_id == nil
+      assert new_comment.body == body
+      assert new_comment.parent_tweet_id == comment.id
     end
   end
 end

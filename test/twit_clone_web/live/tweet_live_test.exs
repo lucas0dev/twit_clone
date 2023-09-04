@@ -5,8 +5,8 @@ defmodule TwitCloneWeb.TweetLiveTest do
   import TwitClone.TweetsFixtures
   alias TwitClone.AccountsFixtures
   alias TwitClone.Repo
+  alias TwitClone.Tweets
   alias TwitClone.Tweets.Tweet
-  alias TwitClone.Tweets.Comment
   alias Phoenix.LiveView
 
   @create_attrs %{body: "some body"}
@@ -239,7 +239,7 @@ defmodule TwitCloneWeb.TweetLiveTest do
     end
 
     test "clicking on .new-comment button redirects to log in", %{conn: conn, tweet: tweet} do
-      comment_fixture(tweet_id: tweet.id)
+      comment_fixture(parent_tweet_id: tweet.id)
       {:ok, lv, _html} = live(conn, ~p"/tweets/#{tweet}")
 
       assert lv |> element("button.add-comment") |> has_element? == true
@@ -324,7 +324,7 @@ defmodule TwitCloneWeb.TweetLiveTest do
       assert lv |> element("#actions-#{another_tweet.id} a", "Delete") |> has_element? == false
     end
 
-    test "clicking on new #add-tweet-comment links new comment to tweet", %{
+    test "clicking on button #add-tweet-comment adds new comment to tweet after submitting", %{
       conn: conn,
       tweet: tweet,
       user: user
@@ -340,7 +340,7 @@ defmodule TwitCloneWeb.TweetLiveTest do
              |> form("#new-comment-form", comment: %{body: "comment body"})
              |> render_submit()
 
-      assert [] = Repo.all(Comment)
+      assert [] = Tweets.get_comments()
 
       assert lv
              |> element("button#add-tweet-comment")
@@ -353,18 +353,18 @@ defmodule TwitCloneWeb.TweetLiveTest do
       flash = assert_redirected(lv, ~p"/tweets/#{tweet}")
       assert flash["info"] == "Comment created successfully"
 
-      [comment] = Repo.all(Comment)
+      [comment] = Tweets.get_comments()
 
-      assert comment.tweet_id == tweet.id
+      assert comment.parent_tweet_id == tweet.id
       assert comment.body == "comment body"
     end
 
-    test "clicking on new .add-comment links new comment to comment", %{
+    test "clicking on button .add-comment adds new comment to comment after submitting", %{
       conn: conn,
       tweet: tweet,
       user: user
     } do
-      comment_fixture(tweet_id: tweet.id)
+      comment_fixture(parent_tweet_id: tweet.id)
 
       {:ok, lv, _html} =
         conn
@@ -377,7 +377,7 @@ defmodule TwitCloneWeb.TweetLiveTest do
              |> form("#new-comment-form", comment: %{body: "comment body"})
              |> render_submit()
 
-      assert [comment] = Repo.all(Comment)
+      assert [comment] = Tweets.get_comments()
 
       assert lv
              |> element("button.add-comment")
@@ -390,70 +390,11 @@ defmodule TwitCloneWeb.TweetLiveTest do
       flash = assert_redirected(lv, ~p"/tweets/#{tweet}")
       assert flash["info"] == "Comment created successfully"
 
-      [_, reply] = Repo.all(Comment)
+      [_, reply] = Tweets.get_comments()
 
-      assert reply.tweet_id == nil
-      assert reply.comment_id == comment.id
+      assert reply.parent_tweet_id == comment.id
       assert reply.body == "comment body"
     end
-
-    # test "clicking on comment actions button adds comment edit modal to the view", %{
-    #   conn: conn,
-    #   user: user
-    # } do
-    #   tweet = tweet_fixture()
-    #   comment_fixture(tweet_id: tweet.id, user_id: user.id)
-
-    #   {:ok, lv, _html} =
-    #     conn
-    #     |> log_in_user(user)
-    #     |> live(~p"/tweets/#{tweet}")
-
-    #   assert lv |> element("button.actions-button") |> has_element? == true
-    #   assert lv |> element("#edit-comment-modal") |> has_element? == false
-
-    #   assert lv
-    #          |> element("button.actions-button")
-    #          |> render_click()
-
-    #   assert lv |> element("#edit-comment-modal") |> has_element? == true
-    # end
-
-    # test "clicking on comment actions button links comment to the edit form", %{
-    #   conn: conn,
-    #   user: user
-    # } do
-    #   tweet = tweet_fixture()
-    #   comment_fixture(tweet_id: tweet.id, user_id: user.id)
-
-    #   {:ok, lv, _html} =
-    #     conn
-    #     |> log_in_user(user)
-    #     |> live(~p"/tweets/#{tweet}")
-
-    #   assert lv |> element("button.actions-button") |> has_element? == true
-    #   assert lv |> element("#edit-comment-modal") |> has_element? == false
-
-    #   assert lv
-    #          |> form("#comment-form", comment: %{body: "changed body"})
-    #          |> render_submit()
-
-    #   assert [comment] = Repo.all(Comment)
-    #   assert comment.body != "changed body"
-
-    #   assert lv
-    #          |> element("button.actions-button")
-    #          |> render_click()
-
-    #   assert lv |> element("#edit-comment-modal") |> has_element? == true
-
-    #   assert lv
-    #          |> form("#comment-form", comment: %{body: "changed body"})
-    #          |> render_submit()
-
-    #   assert [comment] = Repo.all(Comment)
-    #   assert comment.body == "changed body"
-    # end
   end
 
   describe "FormComponent with action new " do

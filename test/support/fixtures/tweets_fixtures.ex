@@ -44,14 +44,12 @@ defmodule TwitClone.TweetsFixtures do
 
   def comment_fixture(attrs \\ %{}, assoc_params) do
     user_id = assoc_params[:user_id] || AccountsFixtures.user_fixture().id
-    tweet_id = assoc_params[:tweet_id] || tweet_fixture().id
-    comment_id = assoc_params[:comment_id]
+    parent_tweet_id = assoc_params[:parent_tweet_id] || tweet_fixture().id
 
     assoc_params =
       %{}
-      |> Map.put("comment_id", comment_id)
+      |> Map.put("parent_tweet_id", parent_tweet_id)
       |> Map.put("user_id", user_id)
-      |> Map.put("tweet_id", tweet_id)
 
     image = "test/support/test_image.jpg"
     dest = Path.join([:code.priv_dir(:twit_clone), "static", "uploads", random_string()])

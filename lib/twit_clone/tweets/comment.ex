@@ -10,16 +10,15 @@ defmodule TwitClone.Tweets.Comment do
 
   @type t :: %__MODULE__{}
 
-  schema "comments" do
+  schema "tweets" do
     field :body, :string
     field :image, :string
     belongs_to :user, User
-    belongs_to :tweet, Tweet
-    belongs_to :comment, Comment
+    belongs_to :parent_tweet, Tweet, foreign_key: :parent_tweet_id
 
     has_many :replies, Comment,
-      foreign_key: :comment_id,
-      on_delete: :delete_all,
+      foreign_key: :parent_tweet_id,
+      on_delete: :nothing,
       preload_order: [desc: :id]
 
     timestamps()
@@ -28,10 +27,9 @@ defmodule TwitClone.Tweets.Comment do
   @doc false
   def changeset(comment, attrs) do
     comment
-    |> cast(attrs, [:body, :image, :user_id, :tweet_id, :comment_id])
-    |> validate_required([:user_id])
+    |> cast(attrs, [:body, :image, :user_id, :parent_tweet_id])
+    |> validate_required([:user_id, :parent_tweet_id])
     |> validate_image_and_body()
-    |> validate_tweet_and_comment()
     |> validate_length(:body, max: 280)
   end
 
@@ -39,15 +37,6 @@ defmodule TwitClone.Tweets.Comment do
     with nil <- get_field(changeset, :body),
          nil <- get_field(changeset, :image) do
       add_error(changeset, :body, "image and comment content can't be blank at the same time")
-    else
-      _ -> changeset
-    end
-  end
-
-  defp validate_tweet_and_comment(changeset) do
-    with nil <- get_field(changeset, :tweet_id),
-         nil <- get_field(changeset, :comment_id) do
-      add_error(changeset, :tweet_id, "comment must belong to tweet or other comment")
     else
       _ -> changeset
     end
